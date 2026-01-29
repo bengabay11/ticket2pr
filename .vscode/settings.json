@@ -1,0 +1,32 @@
+{
+	"editor.formatOnSave": true,
+	"[python]": {
+		"editor.defaultFormatter": "charliermarsh.ruff"
+	},
+	"ruff.configuration": "ruff.toml",
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"python.testing.pytestArgs": ["tests"],
+	"python.testing.unittestEnabled": false,
+	"python.testing.pytestEnabled": true,
+	"files.eol": "\n",
+	"cSpell.words": [
+		"absolufy",
+		"codespell",
+		"colorlog",
+		"customise",
+		"dotenv",
+		"errmsg",
+		"isort",
+		"levelname",
+		"mypy",
+		"pycodestyle",
+		"Pydantic",
+		"pydocstyle",
+		"pyflakes",
+		"pyproject",
+		"pytest",
+		"pyupgrade",
+		"testpaths",
+		"venv"
+	]
+}

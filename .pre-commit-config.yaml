@@ -1,0 +1,72 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: destroyed-symlinks
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: fix-byte-order-marker
+      - id: debug-statements
+      - id: check-vcs-permalinks
+      - id: check-ast
+      - id: check-added-large-files
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # Verifies that json files in a repository are valid JSON5.
+  # The JSON5 format is similar to JSON, but it permits comments, trailing commas, and more.
+  # This hook is a drop-in replacement for the check-json
+  # hook from the official pre-commit-hooks repository.
+  - repo: https://gitlab.com/bmares/check-json5
+    rev: v1.0.0
+    hooks:
+      - id: check-json5
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.7.9
+    hooks:
+      - id: uv-lock
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.12
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: ["--write-changes"]
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.16.0
+    hooks:
+      - id: mypy
+        # mypy causing problems in the pre-commit without specifying the dependencies.
+        # need to think about a better way to handle this.
+        additional_dependencies:
+          [tokenize-rt==3.2.0, colorlog, pydantic, pydantic-settings, "pytest", "pytest-cases"]
+
+  # Although Ruff detects relative imports via TID252, it does not auto-fix them yet.
+  # We use absolufy-imports, until Ruff supports this feature.
+  - repo: https://github.com/MarcoGorelli/absolufy-imports
+    rev: v0.3.1
+    hooks:
+      - id: absolufy-imports
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-bandit
+    rev: v1.0.5
+    hooks:
+      - id: python-bandit-vulnerability-check
+        args: [--quiet, --skip, "B101", --recursive, src]

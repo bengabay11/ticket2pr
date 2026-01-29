@@ -1,0 +1,32 @@
+name: Unit Tests
+on: [push]
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 12
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.9"
+
+      - name: Install dependencies using uv
+        run: |
+          uv pip install -r pyproject.toml --system
+          uv pip install -r pyproject.toml --system --group dev
+
+      - name: Run unit tests
+        run: pytest -vv tests/unit
+
+      - name: Run integration tests
+        run: pytest -vv tests/integration
