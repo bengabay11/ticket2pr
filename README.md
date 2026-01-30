@@ -62,8 +62,7 @@ Before you begin, ensure you have:
    Test your setup by running the included example:
 
    ```sh
-   cd src
-   python main.py
+   python src.main
    ```
 
    Alternatively, you can use the pre-configured VS Code debug settings in [launch.json](.vscode/launch.json) for a seamless debugging experience.
@@ -103,7 +102,6 @@ docker run --rm ghcr.io/OWNER/REPO:local
 This template features a modern configuration system using [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) (see [settings.py](src/settings.py)).
 
 - **Multi-source loading:** Settings are loaded in the following order of precedence:
-
   1. Direct class initialization
   2. TOML config file (e.g., [config/config.example.toml](config/config.example.toml))
   3. environment variables (including `.env`).

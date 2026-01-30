@@ -40,8 +40,6 @@ def find_first_toml(search_dir: Path, patterns: list[str] | None = None) -> Path
 
 
 class LoggingSettings(BaseModel):
-    """Logging-related settings."""
-
     min_log_level: str = "INFO"
     log_file_path: Path | None = None
 
@@ -49,10 +47,25 @@ class LoggingSettings(BaseModel):
 
 
 class AppCoreSettings(BaseModel):
-    """Core application settings."""
+    app_name: str = "Ticket To PR"
+    workspace_path: Path
+    base_branch: str
 
-    app_name: str = "Python Template"
-    environment: str = "Development"
+    model_config = ConfigDict(extra="forbid")
+
+
+class JiraSettings(BaseModel):
+    base_url: str
+    username: str
+    api_token: str
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class GitHubSettings(BaseModel):
+    username: str
+    api_token: str
+    repo_full_name: str
 
     model_config = ConfigDict(extra="forbid")
 
@@ -73,6 +86,8 @@ class AppSettings(BaseSettings):
 
     core: AppCoreSettings
     logging: LoggingSettings
+    jira: JiraSettings
+    github: GitHubSettings
 
     model_config = SettingsConfigDict(
         env_file=".env",

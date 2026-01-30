@@ -9,7 +9,7 @@ lint.select = [
     # Additional recommended rules (customize or remove as needed for your project)
     'ERA',    # eradicate (removes commented-out code)
     'TRY',    # TRY (prevent exception handling anti-patterns)
-    'D',      # pydocstyle (checking compliance with Python docstring conventions)
+    # 'D',      # pydocstyle (checking compliance with Python docstring conventions)
     'RUF',    # the ruff developer's own rules
     'SIM',    # flake8-simplify
     'ARG',    # flake8-arguments (checks for unused function arguments)
@@ -22,17 +22,5 @@ lint.select = [
     'Q',      # flake8-quotes (checks for consistent use of quotes)
     'RSE',    # flake8-raise (finds improvements for raise statements)
     'N',      # flake8-naming (enforce naming conventions)
-]
-lint.ignore = [
-    "D100",  # Missing docstring in public module
-    "D101",  # Missing docstring in public class
-    "D102",  # Missing docstring in public method
-    "D103",  # Missing docstring in public function
-    "D104",  # Missing docstring in public packageRuffD104
-    "D203",  # incorrect-blank-line-before-class
-    "D205",  # missing-blank-line-after-summary
-    "D211",  # no-blank-line-before-class
-    "D212",  # multi-line-summary-first-line
-    "D213",  # multi-line-summary-second-line
 ]
 line-length = 100
