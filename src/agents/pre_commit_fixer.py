@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from src.agents.base import run_agent_query
-from src.pre_commit_runner import run_pre_commit
+from src.shell.pre_commit_runner import run_pre_commit
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer specializing in fixing pre-commit hook failures.

@@ -9,7 +9,7 @@ from src.clients.github_client import GitHubClient
 from src.clients.jira_client import JiraClient
 from src.enhanced_git import EnhancedGit
 from src.pr_content import generate_pr_title_from_jira_issue
-from src.pre_commit_runner import is_pre_commit_installed, run_pre_commit
+from src.shell.pre_commit_runner import is_pre_commit_installed, run_pre_commit
 
 logger = logging.getLogger(__name__)
 

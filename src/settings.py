@@ -43,7 +43,7 @@ def find_first_toml(search_dir: Path, patterns: list[str] | None = None) -> Path
 
 class LoggingSettings(BaseModel):
     min_log_level: str = "INFO"
-    log_file_path: Path | None = None
+    log_file_path: Path = Path("ticket2pr.log")
 
     model_config = ConfigDict(extra="forbid")
 

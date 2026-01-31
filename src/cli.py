@@ -23,6 +23,7 @@ from src.console_utils import (
 from src.enhanced_git import EnhancedGit
 from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
 from src.settings import AppSettings
+from src.shell.claude_auth_status import is_claude_logged_in
 
 if TYPE_CHECKING:
     from src.clients.github_client import GitHubClient
@@ -120,6 +121,13 @@ def run(
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
+
+    if not is_claude_logged_in():
+        hint = "Run /login or set the 'ANTHROPIC_API_KEY' environment variable."
+        message = "Claude Code authentication not found."
+        print_error(message)
+        print_label_value("Hint", hint)
+        sys.exit(1)
 
     settings = _load_settings()
 

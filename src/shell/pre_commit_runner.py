@@ -1,24 +1,8 @@
 import shutil
-import subprocess  # nosec B404: subprocess is required to run pre-commit tools
 from pathlib import Path
 
-from pydantic import BaseModel
-
 from src.exceptions import PreCommitNotFoundError
-
-
-class PreCommitResult(BaseModel):
-    returncode: int
-    stdout: str
-    stderr: str
-
-    @property
-    def success(self) -> bool:
-        return self.returncode == 0
-
-    @property
-    def output(self) -> str:
-        return self.stdout + self.stderr
+from src.shell.base import CommandResult, run_command
 
 
 def find_pre_commit_executable() -> str | None:
@@ -41,7 +25,7 @@ def is_pre_commit_installed() -> bool:
     return find_pre_commit_executable() is not None
 
 
-def run_pre_commit(workspace_path: Path) -> PreCommitResult:
+def run_pre_commit(workspace_path: Path) -> CommandResult:
     """
     Run pre-commit hooks on staged files and return the result.
 
@@ -61,15 +45,4 @@ def run_pre_commit(workspace_path: Path) -> PreCommitResult:
     if not pre_commit_executable:
         raise PreCommitNotFoundError
 
-    result = subprocess.run(
-        [pre_commit_executable, "run"],  # nosec B603: pre_commit_executable is resolved via shutil.which and is trusted
-        cwd=expanded_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return PreCommitResult(
-        returncode=result.returncode,
-        stdout=result.stdout,
-        stderr=result.stderr,
-    )
+    return run_command([pre_commit_executable, "run"], expanded_path)
