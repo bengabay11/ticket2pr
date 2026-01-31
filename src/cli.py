@@ -122,14 +122,14 @@ def run(
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
 
+    settings = _load_settings()
+
     if not is_claude_logged_in():
         hint = "Run /login or set the 'ANTHROPIC_API_KEY' environment variable."
         message = "Claude Code authentication not found."
         print_error(message)
         print_label_value("Hint", hint)
         sys.exit(1)
-
-    settings = _load_settings()
 
     final_workspace_path = workspace_path or settings.core.workspace_path
     final_base_branch = base_branch or settings.core.base_branch
