@@ -37,7 +37,6 @@ def _show_summary(
     base_branch: str,
     jira_base_url: str,
     jira_username: str,
-    github_username: str,
     repo_full_name: str,
 ) -> None:
     summary_content = "\n".join(
@@ -48,7 +47,6 @@ def _show_summary(
             f"{format_dim('Base branch:')} {base_branch!s}",
             f"{format_dim('Jira URL:')} {jira_base_url!s}",
             f"{format_dim('Jira username:')} {jira_username!s}",
-            f"{format_dim('GitHub username:')} {github_username!s}",
             f"{format_dim('Repository:')} {repo_full_name!s}",
         ]
     )
@@ -151,12 +149,7 @@ def _collect_jira_settings() -> tuple[str, str, str]:
 
 
 @section_decorator("GitHub Settings")
-def _collect_github_settings() -> tuple[str, str, str]:
-    github_username = _prompt_with_validation(
-        "GitHub username",
-        lambda v: validate_non_empty(v, "Username"),
-    )
-
+def _collect_github_settings() -> tuple[str, str]:
     github_api_token = _prompt_with_validation(
         "GitHub personal access token",
         lambda v: validate_non_empty(v, "API token"),
@@ -169,7 +162,7 @@ def _collect_github_settings() -> tuple[str, str, str]:
         hint=" (e.g., owner/repo)",
     )
 
-    return github_username, github_api_token, repo_full_name
+    return github_api_token, repo_full_name
 
 
 def _write_toml_config(
@@ -179,7 +172,6 @@ def _write_toml_config(
     jira_base_url: str,
     jira_username: str,
     jira_api_token: str,
-    github_username: str,
     github_api_token: str,
     repo_full_name: str,
 ) -> None:
@@ -197,7 +189,6 @@ def _write_toml_config(
             "api_token": jira_api_token,
         },
         "github": {
-            "username": github_username,
             "api_token": github_api_token,
             "repo_full_name": repo_full_name,
         },
@@ -213,14 +204,13 @@ def initialize_settings(config_path: Path) -> None:
 
         workspace_path, base_branch = _collect_core_settings()
         jira_base_url, jira_username, jira_api_token = _collect_jira_settings()
-        github_username, github_api_token, repo_full_name = _collect_github_settings()
+        github_api_token, repo_full_name = _collect_github_settings()
 
         _show_summary(
             workspace_path,
             base_branch,
             jira_base_url,
             jira_username,
-            github_username,
             repo_full_name,
         )
         if _confirm_save():
@@ -231,7 +221,6 @@ def initialize_settings(config_path: Path) -> None:
                 jira_base_url,
                 jira_username,
                 jira_api_token,
-                github_username,
                 github_api_token,
                 repo_full_name,
             )

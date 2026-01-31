@@ -64,7 +64,6 @@ class JiraSettings(BaseModel):
 
 
 class GitHubSettings(BaseModel):
-    username: str
     api_token: str
     repo_full_name: str
 
