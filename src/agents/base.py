@@ -1,0 +1,38 @@
+from collections.abc import AsyncGenerator
+
+from claude_agent_sdk import ClaudeAgentOptions, query
+
+
+async def run_agent_query(
+    prompt: str,
+    system_prompt: str,
+    allowed_tools: list[str],
+    permission_mode: str | None = None,
+) -> AsyncGenerator[str]:
+    """
+    Execute a Claude Agent SDK query with standardized message handling.
+
+    This function encapsulates the common pattern of creating ClaudeAgentOptions,
+    executing a query, and printing the results.
+
+    Args:
+        prompt: The user prompt to send to the agent
+        system_prompt: The system prompt defining the agent's role and behavior
+        allowed_tools: List of tool names the agent is allowed to use
+        permission_mode: Optional permission mode (e.g., "acceptEdits").
+                        If None, uses default permission handling.
+    """
+    options_kwargs = {
+        "allowed_tools": allowed_tools,
+        "system_prompt": system_prompt,
+    }
+    if permission_mode is not None:
+        options_kwargs["permission_mode"] = permission_mode
+
+    options = ClaudeAgentOptions(**options_kwargs)
+
+    async for message in query(prompt=prompt, options=options):
+        if hasattr(message, "result") and message.result:
+            yield message.result
+        elif hasattr(message, "content") and message.content:
+            yield message.content

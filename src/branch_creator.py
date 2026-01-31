@@ -1,7 +1,7 @@
 import re
 
-from clients.github_client import GitHubClient
-from clients.jira_client import JiraClient, JiraIssue
+from src.clients.github_client import GitHubClient
+from src.clients.jira_client import JiraClient, JiraIssue
 
 
 def sanitize_branch_name(name: str, max_length: int = 100) -> str:

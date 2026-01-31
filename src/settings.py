@@ -1,12 +1,15 @@
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
     TomlConfigSettingsSource,
 )
+
+# Default configuration directory
+DEFAULT_CONFIG_DIR = Path.home() / ".ticket2pr"
 
 
 def find_first_toml(search_dir: Path, patterns: list[str] | None = None) -> Path:
@@ -47,7 +50,6 @@ class LoggingSettings(BaseModel):
 
 
 class AppCoreSettings(BaseModel):
-    app_name: str = "Ticket To PR"
     workspace_path: Path
     base_branch: str
 
@@ -80,12 +82,12 @@ class AppSettings(BaseSettings):
     3. Environment variables (including `.env` file)
 
     NOTE: For deeply nested environment variables, use the `{SECTION}__{PROPERTY}`
-    naming convention (e.g., `CORE__APP_NAME`).
+    naming convention (e.g., `CORE__WORKSPACE_PATH`).
     The delimiter defined in `model_config.env_nested_delimiter`
     """
 
     core: AppCoreSettings
-    logging: LoggingSettings
+    logging: LoggingSettings = LoggingSettings()
     jira: JiraSettings
     github: GitHubSettings
 
@@ -94,9 +96,8 @@ class AppSettings(BaseSettings):
         env_file_encoding="utf-8",
         # Important for deeply nested env vars.
         # Properties should be named as `{SECTION}__{PROPERTY}` in `.env`.
-        # For example: `CORE__APP_NAME`.
+        # For example: `CORE__WORKSPACE_PATH`.
         env_nested_delimiter="__",
-        toml_file=find_first_toml(Path(__file__).parent.parent / "config"),
         extra="forbid",
     )
 
@@ -109,5 +110,10 @@ class AppSettings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,  # noqa: ARG003
         file_secret_settings: PydanticBaseSettingsSource,  # noqa: ARG003
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+        toml_file = find_first_toml(DEFAULT_CONFIG_DIR)
         # Customize the order of settings sources.(init > toml > env)
-        return (init_settings, TomlConfigSettingsSource(settings_cls), env_settings)
+        return (
+            init_settings,
+            TomlConfigSettingsSource(settings_cls, toml_file=toml_file),
+            env_settings,
+        )

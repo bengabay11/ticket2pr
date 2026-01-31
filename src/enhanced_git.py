@@ -1,6 +1,5 @@
-import os
-
 import git
+from pathlib import Path
 
 from src.exceptions import GitFetchCheckoutError, GitPushError, NoStagedChangesError
 
@@ -13,14 +12,14 @@ class EnhancedGit:
     multiple underlying git commands in sequence.
     """
 
-    def __init__(self, repo_path: str = "."):
+    def __init__(self, repo_path: Path = Path(".")) -> None:
         """
         Initialize an EnhancedGit instance for a given repository path.
 
         Args:
             repo_path: Path to the git repository (default: current directory)
         """
-        self.repo_path = os.path.expanduser(repo_path)
+        self.repo_path = repo_path.expanduser()
         self._repo = None
 
     @property

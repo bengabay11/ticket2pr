@@ -1,9 +1,8 @@
 import os
 from pathlib import Path
 
-from claude_agent_sdk import ClaudeAgentOptions, query
-
-from clients.jira_client import JiraIssue
+from src.agents.base import run_agent_query
+from src.clients.jira_client import JiraIssue
 from src.exceptions import PlanNotFoundError
 
 PLANNING_PHASE_SYSTEM_PROMPT = """
@@ -91,7 +90,7 @@ Description:
 """
 
 
-async def plan_ticket(issue: JiraIssue, workspace_path: str | None = None) -> Path:
+async def plan_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> Path:
     """
     Plan the implementation for a Jira ticket by exploring the codebase and creating PLAN.md.
 
@@ -105,11 +104,8 @@ async def plan_ticket(issue: JiraIssue, workspace_path: str | None = None) -> Pa
     Raises:
         FileNotFoundError: If PLAN.md was not created after planning
     """
-    workspace_path = os.path.expanduser(workspace_path) if workspace_path else os.getcwd()
-
-    plan_path = Path(workspace_path) / "PLAN.md"
-
-    # Format prompts with issue details
+    final_workspace_path = workspace_path.expanduser() if workspace_path else Path.cwd()
+    plan_path = final_workspace_path / "PLAN.md"
     issue_context = {
         "issue_key": issue.key,
         "issue_type": issue.type or "Unknown",
@@ -120,29 +116,22 @@ async def plan_ticket(issue: JiraIssue, workspace_path: str | None = None) -> Pa
     }
 
     planning_prompt = PLANNING_PHASE_PROMPT_TEMPLATE.format(**issue_context)
-    planning_options = ClaudeAgentOptions(
-        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Can write PLAN.md
+
+    async for message in run_agent_query(
+        prompt=planning_prompt,
         system_prompt=PLANNING_PHASE_SYSTEM_PROMPT,
-    )
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Can write PLAN.md
+    ):
+        print(message)
 
-    async for message in query(prompt=planning_prompt, options=planning_options):
-        if hasattr(message, "result") and message.result:
-            print(message.result)
-        elif hasattr(message, "content") and message.content:
-            print(message.content)
-
-    # Verify PLAN.md was created
     if not plan_path.exists():
-        print(f"\nWARNING: PLAN.md was not created at {plan_path}")
         raise PlanNotFoundError(plan_path)
-    else:
-        print(f"\n✓ PLAN.md created at {plan_path}")
 
     return plan_path
 
 
 async def execute_plan(
-    issue: JiraIssue, plan_path: Path | None = None, workspace_path: str | None = None
+    issue: JiraIssue, plan_path: Path | None = None, workspace_path: Path | None = None
 ) -> None:
     """
     Execute the implementation plan for a Jira ticket according to PLAN.md.
@@ -153,10 +142,10 @@ async def execute_plan(
                    If not provided, looks for PLAN.md in workspace_path.
         workspace_path: Optional path to workspace root. Defaults to current directory.
     """
-    workspace_path = os.path.expanduser(workspace_path) if workspace_path else os.getcwd()
+    final_workspace_path = workspace_path.expanduser() if workspace_path else Path.cwd()
 
     if plan_path is None:
-        plan_path = Path(workspace_path) / "PLAN.md"
+        plan_path = final_workspace_path / "PLAN.md"
 
     if not plan_path.exists():
         raise PlanNotFoundError(plan_path)
@@ -170,22 +159,18 @@ async def execute_plan(
         "url": issue.url,
         "description": issue.description or "No description provided",
     }
-
     execution_prompt = EXECUTION_PHASE_PROMPT_TEMPLATE.format(**issue_context)
-    execution_options = ClaudeAgentOptions(
-        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
+
+    async for message in run_agent_query(
+        prompt=execution_prompt,
         system_prompt=EXECUTION_PHASE_SYSTEM_PROMPT,
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
         permission_mode="acceptEdits",  # Auto-approve edits without asking
-    )
-
-    async for message in query(prompt=execution_prompt, options=execution_options):
-        if hasattr(message, "result") and message.result:
-            print(message.result)
-        elif hasattr(message, "content") and message.content:
-            print(message.content)
+    ):
+        print(message)
 
 
-async def try_solve_ticket(issue: JiraIssue, workspace_path: str | None = None) -> None:
+async def try_solve_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> None:
     """
     Solve a Jira ticket using a Plan-Act workflow with Claude Agent SDK.
 

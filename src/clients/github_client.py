@@ -66,7 +66,7 @@ class GitHubClient:
         head_branch: str,
         base_branch: str,
         draft: bool = True,
-    ) -> int:
+    ) -> tuple[int, str]:
         try:
             pr = self.repo.create_pull(
                 title=title,
@@ -78,7 +78,7 @@ class GitHubClient:
         except GithubException as e:
             raise GithubPRCreationError from e
         else:
-            return int(pr.number)
+            return pr.number, pr.html_url
 
     def get_pull_request(self, pr_number: int) -> PullRequestDetails:
         """

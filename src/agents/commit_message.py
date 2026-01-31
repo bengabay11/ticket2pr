@@ -1,4 +1,4 @@
-from claude_agent_sdk import ClaudeAgentOptions, query
+from src.agents.base import run_agent_query
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer. You write clear, concise, and helpful git commit messages.
@@ -40,12 +40,12 @@ text, nothing else. No explanations, no markdown, no code blocks, no headers.
 """
 
 
-async def generate_ai_commit_message() -> None:
-    options = ClaudeAgentOptions(
-        allowed_tools=["Glob", "Bash", "Read", "Grep"],
+async def generate_ai_commit_message() -> str:
+    full_message = ""
+    async for message in run_agent_query(
+        prompt=PROMPT,
         system_prompt=SYSTEM_PROMPT,
-    )
-
-    async for message in query(prompt=PROMPT, options=options):
-        if hasattr(message, "result") and message.result:
-            print(message.result)
+        allowed_tools=["Glob", "Bash", "Read", "Grep"],
+    ):
+        full_message += message
+    return full_message

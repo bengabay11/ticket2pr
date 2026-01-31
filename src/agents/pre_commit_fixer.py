@@ -1,11 +1,7 @@
-import os
-import shutil
-import subprocess  # nosec B404: subprocess is required to run pre-commit tools
+from pathlib import Path
 
-from claude_agent_sdk import ClaudeAgentOptions, query
-from pydantic import BaseModel
-
-from src.exceptions import PreCommitNotFoundError
+from src.agents.base import run_agent_query
+from src.pre_commit_runner import run_pre_commit
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer specializing in fixing pre-commit hook failures.
@@ -47,52 +43,7 @@ Pre-commit output:
 """
 
 
-class PreCommitResult(BaseModel):
-    returncode: int
-    stdout: str
-    stderr: str
-
-    @property
-    def success(self) -> bool:
-        return self.returncode == 0
-
-    @property
-    def output(self) -> str:
-        return self.stdout + self.stderr
-
-
-def run_pre_commit(workspace_path: str) -> PreCommitResult:
-    """
-    Run pre-commit hooks on staged files and return the result.
-
-    Args:
-        workspace_path: Path to the workspace root
-
-    Returns:
-        PreCommitResult with success status and output
-    """
-    expanded_path = os.path.expanduser(workspace_path)
-
-    # Resolving the full path to avoid Bandit B607 (start_process_with_partial_path)
-    pre_commit_executable = shutil.which("pre-commit")
-    if not pre_commit_executable:
-        raise PreCommitNotFoundError
-
-    result = subprocess.run(
-        [pre_commit_executable, "run"],  # nosec B603: pre_commit_executable is resolved via shutil.which and is trusted
-        cwd=expanded_path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    return PreCommitResult(
-        returncode=result.returncode,
-        stdout=result.stdout,
-        stderr=result.stderr,
-    )
-
-
-async def verify_pre_commit_and_fix(workspace_path: str, max_retries: int = 5) -> bool:
+async def verify_pre_commit_and_fix(workspace_path: Path, max_retries: int = 5) -> bool:
     """
     Verify pre-commit hooks pass, fixing issues if needed.
 
@@ -120,17 +71,13 @@ async def verify_pre_commit_and_fix(workspace_path: str, max_retries: int = 5) -
         pre_commit_output=result.output,
     )
 
-    options = ClaudeAgentOptions(
-        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
+    async for message in run_agent_query(
+        prompt=prompt,
         system_prompt=system_prompt,
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         permission_mode="acceptEdits",
-    )
-
-    async for message in query(prompt=prompt, options=options):
-        if hasattr(message, "result") and message.result:
-            print(message.result)
-        elif hasattr(message, "content") and message.content:
-            print(message.content)
+    ):
+        print(message)
 
     final_result = run_pre_commit(workspace_path)
     return final_result.success
