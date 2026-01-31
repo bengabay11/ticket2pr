@@ -1,6 +1,0 @@
-[core]
-app_name = "Ticket2PR"
-
-[logging]
-min_log_level = "INFO"
-log_file_path = "ticket2pr.log"

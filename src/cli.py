@@ -37,7 +37,7 @@ app = typer.Typer(
 def _load_settings() -> AppSettings:
     load_dotenv()
     try:
-        return AppSettings()  # type: ignore[call-arg]
+        return AppSettings()
     except Exception as e:
         print_error_inline(f"loading settings: {e}")
         sys.exit(1)
@@ -132,6 +132,7 @@ def init() -> None:
 def help_command(ctx: typer.Context) -> None:
     """Show help information."""
     typer.echo(ctx.find_root().get_help())
+
 
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:

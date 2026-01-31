@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -8,7 +8,6 @@ from pydantic_settings import (
     TomlConfigSettingsSource,
 )
 
-# Default configuration directory
 DEFAULT_CONFIG_DIR = Path.home() / ".ticket2pr"
 
 
@@ -92,6 +91,9 @@ class AppSettings(BaseSettings):
     github: GitHubSettings
 
     model_config = SettingsConfigDict(
+        # env_file is kept for CWD support. Per Pydantic settings documentation, it only checks the
+        # CWD and won't check parent directories. load_dotenv() is called in the entry point to
+        # handle parent folders.
         env_file=".env",
         env_file_encoding="utf-8",
         # Important for deeply nested env vars.
