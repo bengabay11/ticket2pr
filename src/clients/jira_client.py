@@ -1,13 +1,18 @@
-from jira import JIRA
+from jira import JIRA, JIRAError
 from pydantic import BaseModel
 
-from src.exceptions import JiraIssueFetchError
+from src.exceptions import (
+    JiraIssueFetchServerError,
+    JiraIssueFetchUnknownError,
+    JiraIssueNotFoundError,
+)
 
 
 class JiraIssue(BaseModel):
     key: str
     summary: str
     url: str
+    permalink: str
     description: str | None = None
     type: str | None = None
     status: str | None = None
@@ -35,12 +40,18 @@ class JiraClient:
                 key=issue_key,
                 summary=issue.fields.summary,
                 url=f"{self._url}/browse/{issue_key}",
+                permalink=issue.permalink(),
                 description=issue.fields.description or None,
                 type=issue_type,
                 status=status,
             )
+        except JIRAError as e:
+            if e.status_code == 404:
+                raise JiraIssueNotFoundError(issue_key) from e
+            else:
+                raise JiraIssueFetchServerError(issue_key, str(e)) from e
         except Exception as e:
-            raise JiraIssueFetchError(issue_key) from e
+            raise JiraIssueFetchUnknownError(issue_key) from e
 
     def link_branch(self, issue_key: str, branch_url: str, branch_name: str) -> None:
         link_object = {

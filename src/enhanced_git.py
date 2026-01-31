@@ -1,7 +1,13 @@
-import git
 from pathlib import Path
 
-from src.exceptions import GitFetchCheckoutError, GitPushError, NoStagedChangesError
+import git
+
+from src.exceptions import (
+    GitFetchCheckoutError,
+    GitPushError,
+    GitWorkspacePathNotExistsError,
+    NoStagedChangesError,
+)
 
 
 class EnhancedGit:
@@ -19,6 +25,8 @@ class EnhancedGit:
         Args:
             repo_path: Path to the git repository (default: current directory)
         """
+        if not repo_path.exists():
+            raise GitWorkspacePathNotExistsError(repo_path)
         self.repo_path = repo_path.expanduser()
         self._repo = None
 

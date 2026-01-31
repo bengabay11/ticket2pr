@@ -4,6 +4,8 @@ from github.GitRef import GitRef
 from pydantic import BaseModel
 
 from src.exceptions import (
+    FetchGithubBranchServerError,
+    FetchGithubBranchUnknownError,
     GithubBranchCreationError,
     GithubBranchNotFoundError,
     GithubPRCreationError,
@@ -44,7 +46,12 @@ class GitHubClient:
         try:
             return self.repo.get_git_ref(f"heads/{base_branch}")
         except GithubException as e:
-            raise GithubBranchNotFoundError(base_branch) from e
+            if e.status == 404:
+                raise GithubBranchNotFoundError(base_branch, self.repo.full_name) from e
+            else:
+                raise FetchGithubBranchServerError(base_branch, str(e)) from e
+        except Exception as e:
+            raise FetchGithubBranchUnknownError(base_branch) from e
 
     def create_branch(self, branch_name: str, base_ref: GitRef) -> str:
         branch_url = f"{self.repo.html_url}/tree/{branch_name}"

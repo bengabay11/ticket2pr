@@ -67,7 +67,7 @@ def _confirm_save() -> bool:
 def _show_success(config_path: Path) -> None:
     success_msg = format_success_with_checkmark("Configuration saved successfully!")
     config_msg = format_dim(f"Config file: {config_path!s}")
-    print_success(f"{success_msg}\n\n{config_msg}")
+    print_success(f"{success_msg}\n\n{config_msg}\n")
 
 
 def _prompt_with_validation[T](

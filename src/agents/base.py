@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
+from pathlib import Path
+from typing import Any
 
-from claude_agent_sdk import ClaudeAgentOptions, query
+from claude_agent_sdk import ClaudeAgentOptions, ContentBlock, query
 
 
 async def run_agent_query(
@@ -8,7 +10,8 @@ async def run_agent_query(
     system_prompt: str,
     allowed_tools: list[str],
     permission_mode: str | None = None,
-) -> AsyncGenerator[str]:
+    cwd: Path | None = None,
+) -> AsyncGenerator[str | list[ContentBlock] | Any]:
     """
     Execute a Claude Agent SDK query with standardized message handling.
 
@@ -21,6 +24,7 @@ async def run_agent_query(
         allowed_tools: List of tool names the agent is allowed to use
         permission_mode: Optional permission mode (e.g., "acceptEdits").
                         If None, uses default permission handling.
+        cwd: Optional current working directory for the agent to run from.
     """
     options_kwargs = {
         "allowed_tools": allowed_tools,
@@ -29,9 +33,18 @@ async def run_agent_query(
     if permission_mode is not None:
         options_kwargs["permission_mode"] = permission_mode
 
-    options = ClaudeAgentOptions(**options_kwargs)
+    if cwd is not None:
+        options_kwargs["cwd"] = str(cwd)
 
+    options = ClaudeAgentOptions(**options_kwargs)
     async for message in query(prompt=prompt, options=options):
+        # TODO: handle balance too low gracefully
+        # if isinstance(message, AssistantMessage):
+        #     block = message.content[0]  # noqa: ERA001
+        #     if isinstance(block, TextBlock) and block.text == "Credit balance is too low":
+        #         raise AgentLowCreditBalanceError
+
+        #     yield message.content
         if hasattr(message, "result") and message.result:
             yield message.result
         elif hasattr(message, "content") and message.content:

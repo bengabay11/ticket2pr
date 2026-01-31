@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from src.agents.base import run_agent_query
@@ -121,6 +120,7 @@ async def plan_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> P
         prompt=planning_prompt,
         system_prompt=PLANNING_PHASE_SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Can write PLAN.md
+        cwd=workspace_path,
     ):
         print(message)
 
@@ -166,6 +166,7 @@ async def execute_plan(
         system_prompt=EXECUTION_PHASE_SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
         permission_mode="acceptEdits",  # Auto-approve edits without asking
+        cwd=workspace_path,
     ):
         print(message)
 

@@ -1,3 +1,7 @@
+from pathlib import Path
+
+from claude_agent_sdk import TextBlock
+
 from src.agents.base import run_agent_query
 
 SYSTEM_PROMPT = """
@@ -40,12 +44,16 @@ text, nothing else. No explanations, no markdown, no code blocks, no headers.
 """
 
 
-async def generate_ai_commit_message() -> str:
+async def generate_ai_commit_message(workspace_path: Path) -> str:
     full_message = ""
-    async for message in run_agent_query(
+    async for block in run_agent_query(
         prompt=PROMPT,
         system_prompt=SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep"],
+        cwd=workspace_path,
     ):
-        full_message += message
+        if isinstance(block, TextBlock):
+            full_message += block.text
+        else:
+            print(block)
     return full_message

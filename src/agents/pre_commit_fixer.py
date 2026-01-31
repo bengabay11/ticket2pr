@@ -76,6 +76,7 @@ async def verify_pre_commit_and_fix(workspace_path: Path, max_retries: int = 5) 
         system_prompt=system_prompt,
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         permission_mode="acceptEdits",
+        cwd=workspace_path,
     ):
         print(message)
 
