@@ -4,8 +4,6 @@ from pathlib import Path
 from typing import Any
 
 import tomli_w
-from dotenv import load_dotenv
-from rich.prompt import Confirm, Prompt
 
 from src.console_utils import (
     format_bold,
@@ -20,24 +18,12 @@ from src.console_utils import (
     print_summary,
     print_warning,
 )
-from src.settings import AppSettings
 from src.validators import (
-    validate_branch_name,
     validate_non_empty,
     validate_repo_format,
     validate_url,
     validate_workspace_path,
 )
-
-
-def settings_exist() -> bool:
-    try:
-        load_dotenv()
-        AppSettings()  # type: ignore[call-arg]
-    except Exception:
-        return False
-    else:
-        return True
 
 
 def _show_welcome() -> None:
@@ -70,6 +56,8 @@ def _show_summary(
 
 
 def _confirm_save() -> bool:
+    from rich.prompt import Confirm
+
     if not Confirm.ask(format_cyan("Save this configuration?"), default=True):
         print_warning("Configuration cancelled.")
         return False
@@ -96,6 +84,8 @@ def _prompt_with_validation[T](
     value = None
     while value is None:
         try:
+            from rich.prompt import Prompt
+
             user_input = Prompt.ask(formatted_prompt, default=default, password=password)
             if user_input is not None:
                 value = validator(user_input)
@@ -121,6 +111,8 @@ def section_decorator(section_name: str) -> Callable[[Callable[..., Any]], Calla
 
 @section_decorator("Core Settings")
 def _collect_core_settings() -> tuple[Path, str]:
+    from src.validators import validate_branch_name
+
     workspace_path = _prompt_with_validation(
         "Workspace path",
         validate_workspace_path,

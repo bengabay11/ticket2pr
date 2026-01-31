@@ -1,6 +1,6 @@
 """Unified console printing utilities for consistent formatting across the application."""
 
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 

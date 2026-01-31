@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
-from dotenv import load_dotenv
 
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient
 from src.console_utils import (
     format_dim,
     format_success_with_checkmark,
@@ -20,10 +20,11 @@ from src.console_utils import (
     print_success,
     print_warning,
 )
-from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
-from src.settings import DEFAULT_CONFIG_DIR, AppSettings
-from src.settings_init import initialize_settings, settings_exist
-from src.workflow import workflow
+from src.settings import AppSettings
+
+if TYPE_CHECKING:
+    from src.clients.github_client import GitHubClient
+    from src.clients.jira_client import JiraClient
 
 app = typer.Typer(
     name="ticket2pr",
@@ -35,15 +36,22 @@ app = typer.Typer(
 
 
 def _load_settings() -> AppSettings:
+    from dotenv import load_dotenv
+
     load_dotenv()
     try:
         return AppSettings()
     except Exception as e:
+        from src.console_utils import print_error_inline
+
         print_error_inline(f"loading settings: {e}")
         sys.exit(1)
 
 
 def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient]:
+    from src.clients.github_client import GitHubClient
+    from src.clients.jira_client import JiraClient
+
     github_client = GitHubClient(
         github_token=settings.github.api_token,
         repo_full_name=settings.github.repo_full_name,
@@ -57,6 +65,9 @@ def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient
 
 
 def _init() -> None:
+    from src.settings import DEFAULT_CONFIG_DIR
+    from src.settings_init import initialize_settings
+
     config_path = DEFAULT_CONFIG_DIR / "config.toml"
     initialize_settings(config_path)
 
@@ -72,6 +83,8 @@ def run(
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
+    from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
+
     settings = _load_settings()
 
     final_workspace_path = workspace_path or settings.core.workspace_path
@@ -99,6 +112,8 @@ def run(
     print_empty_line()
 
     try:
+        from src.workflow import workflow
+
         asyncio.run(
             workflow(
                 github_client=github_client,
@@ -134,9 +149,16 @@ def help_command(ctx: typer.Context) -> None:
     typer.echo(ctx.find_root().get_help())
 
 
+def settings_exist() -> bool:
+    config_file_path = Path.home() / ".ticket2pr" / "config.toml"
+    return config_file_path.exists()
+
+
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
     if not settings_exist():
+        from src.console_utils import print_empty_line
+
         _init()
         print_empty_line()
         sys.exit(0)

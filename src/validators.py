@@ -1,7 +1,6 @@
 import re
 from pathlib import Path
 
-import git
 from pydantic import HttpUrl, ValidationError
 
 
@@ -14,6 +13,8 @@ def validate_workspace_path(path_str: str) -> Path:
 
 
 def validate_branch_name(branch: str) -> str:
+    import git
+
     branch = branch.strip()
     if not branch:
         msg = "Branch name cannot be empty"
