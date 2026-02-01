@@ -1,7 +1,13 @@
 [core]
-app_name = "Python Template"
-environment = "Development"
+workspace_path = "."
+base_branch = "main"
 
-[logging]
-min_log_level = "DEBUG"
-log_file_path = "python_template.log"
+[jira]
+base_url = "https://<your_company>.atlassian.net"
+username = "<username>@gmail.com"
+api_token = "<jira_token>"
+
+[github]
+username = "<username>"
+api_token = "github_token"
+repo_full_name = "owner/repo"
