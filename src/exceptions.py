@@ -19,6 +19,13 @@ class GitFetchCheckoutError(EnhancedGitError):
         super().__init__("Failed to fetch and checkout branch")
 
 
+class LocalBranchAlreadyExistsError(GitFetchCheckoutError):
+    def __init__(self, branch_name: str) -> None:
+        super().__init__()
+        self.branch_name = branch_name
+        self.args = (f"Local branch '{branch_name}' already exists",)
+
+
 class GitPushError(EnhancedGitError):
     def __init__(self) -> None:
         super().__init__("Failed to commit and push changes")
@@ -66,8 +73,20 @@ class FetchGithubBranchServerError(FetchGithubBranchError):
 
 
 class GithubBranchCreationError(GithubClientError):
+    pass
+
+
+class GithubBranchCreationServerError(GithubBranchCreationError):
+    def __init__(self, branch_name: str, server_response: str):
+        message = f"Error while created branch '{branch_name}': unknown server error."
+        f"\n Server response: '{server_response}'"
+        super().__init__(message)
+
+
+class GithubBranchAlreadyExistsError(GithubBranchCreationError):
     def __init__(self, branch_name: str):
-        super().__init__(f"Failed to create branch '{branch_name}'")
+        message = f"Error while creating branch '{branch_name}': branch already exists"
+        super().__init__(message)
 
 
 class GithubPRCreationError(GithubClientError):
@@ -124,8 +143,10 @@ class AgentError(Exception):
 
 
 class AgentQueryUnknownError(AgentError):
-    def __init__(self) -> None:
-        super().__init__("Unknown error occurred while sending query to the agent. Query: ")
+    def __init__(self, error_msg: str) -> None:
+        super().__init__(
+            f"Unknown error occurred while sending query to the agent. Error: {error_msg}"
+        )
 
 
 class AgentLowCreditBalanceError(AgentError):

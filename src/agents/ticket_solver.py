@@ -1,8 +1,11 @@
+import logging
 from pathlib import Path
 
-from src.agents.base import run_agent_query
+from src.agents.base import print_agent_message, run_agent_query
 from src.clients.jira_client import JiraIssue
 from src.exceptions import PlanNotFoundError
+
+logger = logging.getLogger(__name__)
 
 PLANNING_PHASE_SYSTEM_PROMPT = """
 You are an expert Software Engineer in the PLANNING phase of implementing a Jira ticket.
@@ -24,6 +27,7 @@ Your role in this phase is to:
 CRITICAL RULES FOR THIS PHASE:
 - You can ONLY write to PLAN.md file (use Write tool)
 - DO NOT modify any other files
+- DO NOT add PLAN.md to git (no git add commands)
 - Use Read, Glob, Grep, and Bash to explore the codebase first
 - The plan must be detailed and specific
 - Include exact file paths that will be touched
@@ -52,31 +56,23 @@ Description:
 EXECUTION_PHASE_SYSTEM_PROMPT = """
 You are an expert Software Engineer in the EXECUTION phase of implementing a Jira ticket.
 
-Your role in this phase is to implement the plan:
-1. Read the PLAN.md file that was created in the Planning Phase
-2. Follow the plan step-by-step to implement the solution
-3. Make the necessary code changes
-4. Run relevant tests to verify the implementation
-5. Fix any issues that arise during testing
-6. Git add all relevant files that were changed or created
+Your role in this phase is to implement the plan provided in the prompt:
+1. Follow the plan step-by-step to implement the solution
+2. Make the necessary code changes
+3. Git add all relevant files that were changed or created
 
 CRITICAL RULES FOR THIS PHASE:
-- Read PLAN.md first to understand what needs to be done
 - Follow the plan's file list and implementation steps
 - Only modify/create files that are listed in the plan
 - Maintain existing code style and patterns
-- Add appropriate error handling and validation
-- Run tests after implementation
-- If tests fail, analyze and fix the issues
+- Add appropriate error handling and validation if needed
 - After making changes, use `git add` to stage all files that were modified or created
 
 You have full access to modify files, but stay within the scope of the plan.
-
-Start by reading PLAN.md, then proceed with the implementation.
 """
 
 EXECUTION_PHASE_PROMPT_TEMPLATE = """
-Please implement the solution according to PLAN.md for this ticket.
+Please implement the solution according to the plan below for this ticket.
 
 Issue Key: {issue_key}
 Issue Type: {issue_type}
@@ -86,25 +82,15 @@ URL: {url}
 
 Description:
 {description}
+
+Plan:
+{plan_content}
 """
 
 
 async def plan_ticket(
     issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
-) -> Path:
-    """
-    Plan the implementation for a Jira ticket by exploring the codebase and creating PLAN.md.
-
-    Args:
-        issue: The JiraIssue object containing all issue details
-        workspace_path: Optional path to workspace root. Defaults to current directory.
-
-    Returns:
-        Path to the created PLAN.md file
-
-    Raises:
-        FileNotFoundError: If PLAN.md was not created after planning
-    """
+) -> tuple[Path, str]:
     final_workspace_path = workspace_path.expanduser() if workspace_path else Path.cwd()
     plan_path = final_workspace_path / "PLAN.md"
     issue_context = {
@@ -118,6 +104,7 @@ async def plan_ticket(
 
     planning_prompt = PLANNING_PHASE_PROMPT_TEMPLATE.format(**issue_context)
 
+    session_id = None
     async for message in run_agent_query(
         prompt=planning_prompt,
         system_prompt=PLANNING_PHASE_SYSTEM_PROMPT,
@@ -125,38 +112,32 @@ async def plan_ticket(
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
     ):
-        print(message)
+        # First message is the session ID
+        if session_id is None:
+            session_id = message
+        else:
+            print_agent_message(message)
 
     if not plan_path.exists():
         raise PlanNotFoundError(plan_path)
 
-    return plan_path
+    return plan_path, str(session_id)
 
 
 async def execute_plan(
     issue: JiraIssue,
-    plan_path: Path | None = None,
+    session_id: str,
+    plan_path: Path,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
 ) -> None:
-    """
-    Execute the implementation plan for a Jira ticket according to PLAN.md.
-
-    Args:
-        issue: The JiraIssue object containing all issue details
-        plan_path: Optional path to PLAN.md file.
-                   If not provided, looks for PLAN.md in workspace_path.
-        workspace_path: Optional path to workspace root. Defaults to current directory.
-    """
-    final_workspace_path = workspace_path.expanduser() if workspace_path else Path.cwd()
-
-    if plan_path is None:
-        plan_path = final_workspace_path / "PLAN.md"
-
     if not plan_path.exists():
         raise PlanNotFoundError(plan_path)
 
-    # Format prompts with issue details
+    # Read plan content and delete the file to prevent accidental git add
+    plan_content = plan_path.read_text()
+    plan_path.unlink()
+
     issue_context = {
         "issue_key": issue.key,
         "issue_type": issue.type or "Unknown",
@@ -164,6 +145,7 @@ async def execute_plan(
         "summary": issue.summary,
         "url": issue.url,
         "description": issue.description or "No description provided",
+        "plan_content": plan_content,
     }
     execution_prompt = EXECUTION_PHASE_PROMPT_TEMPLATE.format(**issue_context)
 
@@ -174,13 +156,14 @@ async def execute_plan(
         permission_mode="acceptEdits",  # Auto-approve edits without asking
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        session_id=session_id,
     ):
-        print(message)
+        print_agent_message(message)
 
 
 async def try_solve_ticket(
     issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
-) -> None:
+) -> str:
     """
     Solve a Jira ticket using a Plan-Act workflow with Claude Agent SDK.
 
@@ -191,6 +174,14 @@ async def try_solve_ticket(
     Args:
         issue: The JiraIssue object containing all issue details
         workspace_path: Optional path to workspace root. Defaults to current directory.
+        mcp_config_path: Optional path to mcp.json configuration file.
+
+    Returns:
+        The session_id from the conversation
     """
-    plan_path = await plan_ticket(issue, workspace_path, mcp_config_path)
-    await execute_plan(issue, plan_path, workspace_path, mcp_config_path)
+    plan_path, session_id = await plan_ticket(issue, workspace_path, mcp_config_path)
+    logger.info(
+        "Plan file created at - %s. Now running the executor agent to implement it.", str(plan_path)
+    )
+    await execute_plan(issue, session_id, plan_path, workspace_path, mcp_config_path)
+    return session_id

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.agents.base import run_agent_query
+from src.agents.base import print_agent_message, run_agent_query
 from src.shell.pre_commit_runner import run_pre_commit
 
 SYSTEM_PROMPT = """
@@ -81,7 +81,7 @@ async def verify_pre_commit_and_fix(
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
     ):
-        print(message)
+        print_agent_message(message)
 
     final_result = run_pre_commit(workspace_path)
     return final_result.success

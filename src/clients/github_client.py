@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from src.exceptions import (
     FetchGithubBranchServerError,
     FetchGithubBranchUnknownError,
-    GithubBranchCreationError,
+    GithubBranchAlreadyExistsError,
+    GithubBranchCreationServerError,
     GithubBranchNotFoundError,
     GithubPRCreationError,
     GithubPRFetchError,
@@ -59,10 +60,10 @@ class GitHubClient:
         try:
             self.repo.create_git_ref(ref=f"refs/heads/{branch_name}", sha=base_ref.object.sha)
         except GithubException as e:
-            if e.status == 422:  # Branch already exists
-                pass
+            if e.status == 422:
+                raise GithubBranchAlreadyExistsError(branch_name) from e
             else:
-                raise GithubBranchCreationError(branch_name) from e
+                raise GithubBranchCreationServerError(branch_name, str(e)) from e
 
         return branch_url
 

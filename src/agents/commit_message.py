@@ -2,7 +2,7 @@ from pathlib import Path
 
 from claude_agent_sdk import TextBlock
 
-from src.agents.base import run_agent_query
+from src.agents.base import print_agent_message, run_agent_query
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer. You write clear, concise, and helpful git commit messages.
@@ -46,14 +46,21 @@ text, nothing else. No explanations, no markdown, no code blocks, no headers.
 
 async def generate_ai_commit_message(workspace_path: Path) -> str:
     full_message = ""
-    async for block in run_agent_query(
+    async for message in run_agent_query(
         prompt=PROMPT,
         system_prompt=SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep"],
         cwd=workspace_path,
     ):
-        if isinstance(block, TextBlock):
-            full_message += block.text
-        else:
-            print(block)
+        # Skip session_id (first yielded item)
+        if isinstance(message, str):
+            continue
+
+        print_agent_message(message)
+
+        if hasattr(message, "content"):
+            for block in message.content:
+                if isinstance(block, TextBlock):
+                    full_message += block.text
+
     return full_message
