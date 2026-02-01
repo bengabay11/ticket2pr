@@ -6,6 +6,7 @@ from src.exceptions import (
     GitFetchCheckoutError,
     GitPushError,
     GitWorkspacePathNotExistsError,
+    LocalBranchAlreadyExistsError,
     NoStagedChangesError,
 )
 
@@ -49,20 +50,20 @@ class EnhancedGit:
             branch_name: Name of the branch to checkout
 
         Raises:
-            Exception: If a git error occurs
+            LocalBranchAlreadyExistsError: If the branch already exists locally
+            GitFetchCheckoutError: If a git error occurs
         """
         try:
             origin = self.repo.remotes.origin
-
             origin.fetch()
-            if branch_name in self.repo.heads:
-                # Case: Branch exists locally
-                print(f"Switching to existing local branch: {branch_name}")
-                self.repo.git.checkout(branch_name)
-            else:
-                # Case: Branch only exists on remote (needs tracking)
-                self.repo.git.checkout("-b", branch_name, f"origin/{branch_name}")
+        except Exception as e:
+            raise GitFetchCheckoutError from e
 
+        if branch_name in self.repo.heads:
+            raise LocalBranchAlreadyExistsError(branch_name)
+
+        try:
+            self.repo.git.checkout(branch_name)
         except Exception as e:
             raise GitFetchCheckoutError from e
 
