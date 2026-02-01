@@ -1,14 +1,11 @@
-"""Setup script for ticket2pr package."""
-
 from setuptools import find_packages, setup
 
-# Read the long description from README
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
     name="ticket2pr",
-    version="0.1.0",
+    version="0.2.0",
     author="Ben Gabay",
     author_email="ben.gabay38@gmail.com",
     description="Automate Jira ticket to GitHub PR workflow",
@@ -20,11 +17,13 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.13",
+    python_requires=">=3.10",
     install_requires=[
         "claude-agent-sdk>=0.1.25",
         "colorlog>=6.9.0",
