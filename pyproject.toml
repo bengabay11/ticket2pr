@@ -1,7 +1,7 @@
 [project]
-name = "python-template"
+name = "ticket2pr"
 version = "0.1.0"
-description = "A boilerplate template to kickstart new Python projects."
+description = "Automate Jira ticket to GitHub PR workflow"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -17,6 +17,9 @@ dependencies = [
     "tomli-w>=1.2.0",
     "typer>=0.21.1",
 ]
+
+[project.scripts]
+ticket2pr = "src.cli:cli_main"
 
 [dependency-groups]
 dev = [

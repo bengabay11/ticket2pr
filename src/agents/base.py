@@ -11,6 +11,7 @@ async def run_agent_query(
     allowed_tools: list[str],
     permission_mode: str | None = None,
     cwd: Path | None = None,
+    mcp_config_path: Path | None = None,
 ) -> AsyncGenerator[str | list[ContentBlock] | Any]:
     """
     Execute a Claude Agent SDK query with standardized message handling.
@@ -25,6 +26,7 @@ async def run_agent_query(
         permission_mode: Optional permission mode (e.g., "acceptEdits").
                         If None, uses default permission handling.
         cwd: Optional current working directory for the agent to run from.
+        mcp_config_path: Optional path to mcp.json configuration file for MCP servers.
     """
     options_kwargs = {
         "allowed_tools": allowed_tools,
@@ -35,6 +37,9 @@ async def run_agent_query(
 
     if cwd is not None:
         options_kwargs["cwd"] = str(cwd)
+
+    if mcp_config_path is not None:
+        options_kwargs["mcp_config_path"] = str(mcp_config_path)
 
     options = ClaudeAgentOptions(**options_kwargs)
     async for message in query(prompt=prompt, options=options):

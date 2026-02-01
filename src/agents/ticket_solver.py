@@ -89,7 +89,9 @@ Description:
 """
 
 
-async def plan_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> Path:
+async def plan_ticket(
+    issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
+) -> Path:
     """
     Plan the implementation for a Jira ticket by exploring the codebase and creating PLAN.md.
 
@@ -121,6 +123,7 @@ async def plan_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> P
         system_prompt=PLANNING_PHASE_SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Can write PLAN.md
         cwd=workspace_path,
+        mcp_config_path=mcp_config_path,
     ):
         print(message)
 
@@ -131,7 +134,10 @@ async def plan_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> P
 
 
 async def execute_plan(
-    issue: JiraIssue, plan_path: Path | None = None, workspace_path: Path | None = None
+    issue: JiraIssue,
+    plan_path: Path | None = None,
+    workspace_path: Path | None = None,
+    mcp_config_path: Path | None = None,
 ) -> None:
     """
     Execute the implementation plan for a Jira ticket according to PLAN.md.
@@ -167,11 +173,14 @@ async def execute_plan(
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
         permission_mode="acceptEdits",  # Auto-approve edits without asking
         cwd=workspace_path,
+        mcp_config_path=mcp_config_path,
     ):
         print(message)
 
 
-async def try_solve_ticket(issue: JiraIssue, workspace_path: Path | None = None) -> None:
+async def try_solve_ticket(
+    issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
+) -> None:
     """
     Solve a Jira ticket using a Plan-Act workflow with Claude Agent SDK.
 
@@ -183,5 +192,5 @@ async def try_solve_ticket(issue: JiraIssue, workspace_path: Path | None = None)
         issue: The JiraIssue object containing all issue details
         workspace_path: Optional path to workspace root. Defaults to current directory.
     """
-    plan_path = await plan_ticket(issue, workspace_path)
-    await execute_plan(issue, plan_path, workspace_path)
+    plan_path = await plan_ticket(issue, workspace_path, mcp_config_path)
+    await execute_plan(issue, plan_path, workspace_path, mcp_config_path)

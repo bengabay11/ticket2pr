@@ -82,6 +82,7 @@ async def workflow_with_prints(
     github_client: GitHubClient,
     jira_client: JiraClient,
     local_git: EnhancedGit,
+    mcp_config_path: Path | None = None,
 ) -> None:
     header_msg = f"Running workflow for {format_yellow(jira_issue_key)}"
     print_info(header_msg)
@@ -98,6 +99,7 @@ async def workflow_with_prints(
         jira_issue_key=jira_issue_key,
         git=local_git,
         base_branch=base_branch,
+        mcp_config_path=mcp_config_path,
     )
 
     success_msg = format_success_with_checkmark("Workflow completed successfully!")
@@ -118,6 +120,9 @@ def run(
     ),
     base_branch: str | None = typer.Option(
         None, "--base-branch", "-b", help="Base branch (overrides settings)"
+    ),
+    mcp_config_path: Path | None = typer.Option(  # noqa: B008
+        None, "--mcp-config-path", "-m", help="Path to mcp.json config file for Claude agents"
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
@@ -158,6 +163,7 @@ def run(
                 github_client,
                 jira_client,
                 local_git,
+                mcp_config_path,
             )
         )
     except KeyboardInterrupt:
@@ -196,5 +202,10 @@ def main(ctx: typer.Context) -> None:
         typer.echo(ctx.get_help())
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Entry point for the CLI."""
     app()
+
+
+if __name__ == "__main__":
+    cli_main()

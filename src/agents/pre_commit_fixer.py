@@ -43,7 +43,9 @@ Pre-commit output:
 """
 
 
-async def verify_pre_commit_and_fix(workspace_path: Path, max_retries: int = 5) -> bool:
+async def verify_pre_commit_and_fix(
+    workspace_path: Path, max_retries: int = 5, mcp_config_path: Path | None = None
+) -> bool:
     """
     Verify pre-commit hooks pass, fixing issues if needed.
 
@@ -77,6 +79,7 @@ async def verify_pre_commit_and_fix(workspace_path: Path, max_retries: int = 5) 
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         permission_mode="acceptEdits",
         cwd=workspace_path,
+        mcp_config_path=mcp_config_path,
     ):
         print(message)
 

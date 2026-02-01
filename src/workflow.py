@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -27,6 +28,7 @@ async def workflow(
     jira_issue_key: str,
     git: EnhancedGit,
     base_branch: str,
+    mcp_config_path: Path | None = None,
 ) -> WorkflowResult:
     logger.info("Fetching Jira issue: %s", jira_issue_key)
     issue = jira_client.fetch_issue(jira_issue_key)
@@ -40,13 +42,13 @@ async def workflow(
     logger.info("Fetching and checking out branch: %s", branch_name)
     git.fetch_and_checkout_branch(branch_name)
     logger.info("Solving ticket: %s (workspace: %s)", issue.key, git.repo_path)
-    await try_solve_ticket(issue, workspace_path=git.repo_path)
+    await try_solve_ticket(issue, workspace_path=git.repo_path, mcp_config_path=mcp_config_path)
     if is_pre_commit_installed():
         logger.info("pre-commit is installed. Trying to run it")
         result = run_pre_commit(git.repo_path)
         if not result.success:
             logger.info("pre-commit failed. trying to fix it (workspace: %s)", git.repo_path)
-            await verify_pre_commit_and_fix(git.repo_path)
+            await verify_pre_commit_and_fix(git.repo_path, mcp_config_path=mcp_config_path)
         else:
             logger.info("Skipping pre-commit fix: pre-commit is is already passing")
     else:
