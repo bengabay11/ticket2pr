@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from claude_agent_sdk import (
@@ -5,6 +6,7 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ContentBlock,
     Message,
+    PermissionMode,
     ResultMessage,
     SystemMessage,
     TextBlock,
@@ -16,6 +18,18 @@ from claude_agent_sdk import (
 )
 
 from src.exceptions import AgentQueryUnknownError
+
+
+def extract_session_id(message: Message) -> str | None:
+    """
+    Extract session_id from an init message.
+
+    Returns the session_id if the message is an init SystemMessage, None otherwise.
+    """
+    if isinstance(message, SystemMessage) and message.subtype == "init":
+        session_id: str | None = message.data.get("session_id")
+        return session_id
+    return None
 
 
 def _format_content_blocks(content: list[ContentBlock]) -> list[str]:
@@ -59,10 +73,12 @@ def _format_content_blocks(content: list[ContentBlock]) -> list[str]:
 
             elif tool_name == "Bash":
                 command = tool_input.get("command", "unknown")
-                # Truncate long commands
-                if len(command) > 80:
-                    command = command[:77] + "..."
-                output_parts.append(f"💻 Running: {command}")
+                description = tool_input.get("description")
+                if description:
+                    output_parts.append(f"💻 Bash: {description}")
+                    output_parts.append(f"   ↳ {command}")
+                else:
+                    output_parts.append(f"💻 Bash: {command}")
 
             else:
                 output_parts.append(f"🔧 Using tool: {tool_name}")
@@ -126,11 +142,11 @@ async def run_agent_query(
     prompt: str,
     system_prompt: str,
     allowed_tools: list[str],
-    permission_mode: str | None = None,
+    permission_mode: PermissionMode = "bypassPermissions",
     cwd: Path | None = None,
     mcp_config_path: Path | None = None,
     session_id: str | None = None,
-) -> Message:
+) -> AsyncGenerator[Message]:
     """
     Execute a Claude Agent SDK query with standardized message handling.
 
@@ -141,34 +157,28 @@ async def run_agent_query(
         prompt: The user prompt to send to the agent
         system_prompt: The system prompt defining the agent's role and behavior
         allowed_tools: List of tool names the agent is allowed to use
-        permission_mode: Optional permission mode (e.g., "acceptEdits").
-                        If None, uses default permission handling.
+        permission_mode: Permission mode for the agent. Defaults to bypassPermissions
+                        to allow full access without prompts.
         cwd: Optional current working directory for the agent to run from.
         mcp_config_path: Optional path to mcp.json configuration file for MCP servers.
     """
     options_kwargs = {
         "allowed_tools": allowed_tools,
         "system_prompt": system_prompt,
+        "permission_mode": permission_mode,
     }
-    if permission_mode is not None:
-        options_kwargs["permission_mode"] = permission_mode
 
     if cwd is not None:
         options_kwargs["cwd"] = str(cwd)
 
     if mcp_config_path is not None:
-        options_kwargs["mcp_config_path"] = str(mcp_config_path)
+        options_kwargs["mcp_servers"] = mcp_config_path
 
     if session_id is not None:
         options_kwargs["resume"] = session_id
-
     options = ClaudeAgentOptions(**options_kwargs)
     try:
         async for message in query(prompt=prompt, options=options):
-            # The first message is a system init message with the session ID
-            if hasattr(message, "subtype") and message.subtype == "init":
-                session_id = message.data.get("session_id")
-                yield session_id
             yield message
     except Exception as e:
         raise AgentQueryUnknownError(str(e)) from e

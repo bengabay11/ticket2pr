@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import shutil
 import sys
+import tempfile
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -23,6 +28,8 @@ from src.console_utils import (
 from src.enhanced_git import EnhancedGit
 from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
 from src.settings import AppSettings
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.clients.github_client import GitHubClient
@@ -48,10 +55,9 @@ def _load_settings() -> AppSettings:
         sys.exit(1)
 
 
-def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient, EnhancedGit]:
+def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient]:
     from src.clients.github_client import GitHubClient
     from src.clients.jira_client import JiraClient
-    from src.enhanced_git import EnhancedGit
 
     github_client = GitHubClient(
         github_token=settings.github.api_token,
@@ -62,8 +68,7 @@ def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient
         username=settings.jira.username,
         password=settings.jira.api_token,
     )
-    git = EnhancedGit(settings.core.workspace_path)
-    return github_client, jira_client, git
+    return github_client, jira_client
 
 
 def _init() -> None:
@@ -74,6 +79,40 @@ def _init() -> None:
     initialize_settings(config_path)
 
 
+@contextmanager
+def _setup_workspace(
+    workspace_path_arg: Path | None,
+    workspace_path_settings: Path | None,
+    github_client: GitHubClient,
+) -> Generator[tuple[EnhancedGit, Path]]:
+    """
+    Set up the workspace for the workflow.
+
+    If no workspace_path is provided (neither arg nor settings), clones the repository
+    to a temp directory and cleans it up when done.
+
+    Yields:
+        A tuple of (EnhancedGit instance, workspace_path)
+    """
+    workspace_path = workspace_path_arg or workspace_path_settings
+    temp_dir: Path | None = None
+    try:
+        if workspace_path is None:
+            temp_dir = Path(tempfile.mkdtemp(prefix="ticket2pr_"))
+            logger.info(
+                "No workspace path provided, cloning repository to temp directory: %s", temp_dir
+            )
+            local_git = EnhancedGit.clone_repo(github_client.clone_url, temp_dir)
+            logger.info("Repository cloned successfully")
+            yield local_git, temp_dir
+        else:
+            yield EnhancedGit(workspace_path), workspace_path
+    finally:
+        if temp_dir and temp_dir.exists():
+            logger.info("Cleaning up temp directory: %s", temp_dir)
+            shutil.rmtree(temp_dir)
+
+
 async def workflow_with_prints(
     jira_issue_key: str,
     workspace_path: Path,
@@ -82,6 +121,7 @@ async def workflow_with_prints(
     jira_client: JiraClient,
     local_git: EnhancedGit,
     mcp_config_path: Path | None = None,
+    commit_no_verify: bool = False,
 ) -> None:
     header_msg = f"Running workflow for {format_yellow(jira_issue_key)}"
     print_info(header_msg)
@@ -99,6 +139,7 @@ async def workflow_with_prints(
         git=local_git,
         base_branch=base_branch,
         mcp_config_path=mcp_config_path,
+        commit_no_verify=commit_no_verify,
     )
 
     success_msg = format_success_with_checkmark("Workflow completed successfully!")
@@ -123,12 +164,17 @@ def run(
     mcp_config_path: Path | None = typer.Option(  # noqa: B008
         None, "--mcp-config-path", "-m", help="Path to mcp.json config file for Claude agents"
     ),
+    commit_no_verify: bool = typer.Option(
+        False,
+        "--commit-no-verify",
+        "-c",
+        help="bypass pre-commit and commit-msg hooks when committing (git commit --no-verify)",
+    ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
 
     settings = _load_settings()
 
-    final_workspace_path = workspace_path or settings.core.workspace_path
     final_base_branch = base_branch or settings.core.base_branch
 
     setup_logger(
@@ -141,30 +187,35 @@ def run(
 
     with get_status("Initializing clients...", spinner="dots"):
         try:
-            github_client, jira_client, local_git = _initialize_clients(settings)
+            github_client, jira_client = _initialize_clients(settings)
         except Exception as e:
             print_error(str(e))
             sys.exit(1)
 
-    try:
-        asyncio.run(
-            workflow_with_prints(
-                jira_issue_key,
-                final_workspace_path,
-                final_base_branch,
-                github_client,
-                jira_client,
-                local_git,
-                mcp_config_path,
+    with _setup_workspace(workspace_path, settings.core.workspace_path, github_client) as (
+        local_git,
+        final_workspace_path,
+    ):
+        try:
+            asyncio.run(
+                workflow_with_prints(
+                    jira_issue_key,
+                    final_workspace_path,
+                    final_base_branch,
+                    github_client,
+                    jira_client,
+                    local_git,
+                    mcp_config_path,
+                    commit_no_verify,
+                )
             )
-        )
-    except KeyboardInterrupt:
-        print_empty_line()
-        print_warning("Workflow interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print_error(str(e), title="Error")
-        sys.exit(1)
+        except KeyboardInterrupt:
+            print_empty_line()
+            print_warning("Workflow interrupted by user")
+            sys.exit(1)
+        except Exception as e:
+            print_error(str(e), title="Error")
+            sys.exit(1)
 
 
 @app.command()

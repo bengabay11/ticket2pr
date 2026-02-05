@@ -31,6 +31,11 @@ class GitPushError(EnhancedGitError):
         super().__init__("Failed to commit and push changes")
 
 
+class GitCloneError(EnhancedGitError):
+    def __init__(self, clone_url: str, error_msg: str) -> None:
+        super().__init__(f"Failed to clone repository from '{clone_url}': {error_msg}")
+
+
 class InvalidGitRepositoryError(EnhancedGitError):
     def __init__(self) -> None:
         super().__init__("Error: The directory provided is not a valid Git repository.")
