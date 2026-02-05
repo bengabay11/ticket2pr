@@ -22,7 +22,6 @@ from src.validators import (
     validate_non_empty,
     validate_repo_format,
     validate_url,
-    validate_workspace_path,
 )
 
 
@@ -33,7 +32,6 @@ def _show_welcome() -> None:
 
 
 def _show_summary(
-    workspace_path: Path,
     base_branch: str,
     jira_base_url: str,
     jira_username: str,
@@ -43,7 +41,6 @@ def _show_summary(
         [
             format_bold("Configuration Summary"),
             "",
-            f"{format_dim('Workspace:')} {workspace_path!s}",
             f"{format_dim('Base branch:')} {base_branch!s}",
             f"{format_dim('Jira URL:')} {jira_base_url!s}",
             f"{format_dim('Jira username:')} {jira_username!s}",
@@ -108,14 +105,8 @@ def section_decorator(section_name: str) -> Callable[[Callable[..., Any]], Calla
 
 
 @section_decorator("Core Settings")
-def _collect_core_settings() -> tuple[Path, str]:
+def _collect_core_settings() -> str:
     from src.validators import validate_branch_name
-
-    workspace_path = _prompt_with_validation(
-        "Workspace path",
-        validate_workspace_path,
-        default=str(Path.cwd()),
-    )
 
     base_branch = _prompt_with_validation(
         "Base branch",
@@ -123,7 +114,7 @@ def _collect_core_settings() -> tuple[Path, str]:
         default="main",
     )
 
-    return workspace_path, base_branch
+    return base_branch
 
 
 @section_decorator("Jira Settings")
@@ -167,7 +158,6 @@ def _collect_github_settings() -> tuple[str, str]:
 
 def _write_toml_config(
     config_path: Path,
-    workspace_path: Path,
     base_branch: str,
     jira_base_url: str,
     jira_username: str,
@@ -180,7 +170,6 @@ def _write_toml_config(
 
     config = {
         "core": {
-            "workspace_path": str(workspace_path),
             "base_branch": base_branch,
         },
         "jira": {
@@ -202,12 +191,11 @@ def initialize_settings(config_path: Path) -> None:
     try:
         _show_welcome()
 
-        workspace_path, base_branch = _collect_core_settings()
+        base_branch = _collect_core_settings()
         jira_base_url, jira_username, jira_api_token = _collect_jira_settings()
         github_api_token, repo_full_name = _collect_github_settings()
 
         _show_summary(
-            workspace_path,
             base_branch,
             jira_base_url,
             jira_username,
@@ -216,7 +204,6 @@ def initialize_settings(config_path: Path) -> None:
         if _confirm_save():
             _write_toml_config(
                 config_path,
-                workspace_path,
                 base_branch,
                 jira_base_url,
                 jira_username,

@@ -1,8 +1,10 @@
 from pathlib import Path
+from typing import Self
 
 import git
 
 from src.exceptions import (
+    GitCloneError,
     GitFetchCheckoutError,
     GitPushError,
     GitWorkspacePathNotExistsError,
@@ -30,6 +32,27 @@ class EnhancedGit:
             raise GitWorkspacePathNotExistsError(repo_path)
         self.repo_path = repo_path.expanduser()
         self._repo = None
+
+    @classmethod
+    def clone_repo(cls, clone_url: str, target_path: Path) -> Self:
+        """
+        Clone a repository to the specified path and return an EnhancedGit instance.
+
+        Args:
+            clone_url: The URL of the repository to clone
+            target_path: The path where the repository will be cloned
+
+        Returns:
+            An EnhancedGit instance for the cloned repository
+
+        Raises:
+            GitCloneError: If cloning fails
+        """
+        try:
+            git.Repo.clone_from(clone_url, target_path)
+        except Exception as e:
+            raise GitCloneError(clone_url, str(e)) from e
+        return cls(target_path)
 
     @property
     def repo(self) -> git.Repo:
@@ -73,7 +96,9 @@ class EnhancedGit:
         """
         self.repo.git.add(A=True)
 
-    def commit_and_push(self, message: str, remote: str = "origin") -> git.Commit | None:
+    def commit_and_push(
+        self, message: str, remote: str = "origin", no_verify: bool = False
+    ) -> git.Commit | None:
         """
         Combined operation: Stage all changes, commit, and push to remote.
 
@@ -86,6 +111,7 @@ class EnhancedGit:
         Args:
             message: Commit message
             remote: Remote name to push to (default: "origin")
+            no_verify: If True, bypasses pre-commit hooks with --no-verify (default: False)
 
         Returns:
             The created commit, or None if there were no changes
@@ -99,7 +125,11 @@ class EnhancedGit:
                 print("No changes detected. Nothing to commit.")
                 return None
 
-            commit = self.repo.index.commit(message)
+            if no_verify:
+                commit = self.repo.git.commit("-m", message, "--no-verify")
+                commit = self.repo.head.commit
+            else:
+                commit = self.repo.index.commit(message)
 
             # Push to remote
             remote_obj = self.repo.remote(name=remote)

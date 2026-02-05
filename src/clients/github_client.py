@@ -43,6 +43,10 @@ class GitHubClient:
             self.client = Github(github_token)
         self.repo = self.client.get_repo(repo_full_name)
 
+    @property
+    def clone_url(self) -> str:
+        return self.repo.clone_url  # type: ignore[no-any-return]
+
     def get_base_branch_ref(self, base_branch: str) -> GitRef:
         try:
             return self.repo.get_git_ref(f"heads/{base_branch}")

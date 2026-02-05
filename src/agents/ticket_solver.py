@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from src.agents.base import print_agent_message, run_agent_query
+from src.agents.base import extract_session_id, print_agent_message, run_agent_query
 from src.clients.jira_client import JiraIssue
 from src.exceptions import PlanNotFoundError
 
@@ -112,11 +112,11 @@ async def plan_ticket(
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
     ):
-        # First message is the session ID
         if session_id is None:
-            session_id = message
-        else:
-            print_agent_message(message)
+            session_id = extract_session_id(message)
+            if session_id:
+                continue
+        print_agent_message(message)
 
     if not plan_path.exists():
         raise PlanNotFoundError(plan_path)
@@ -153,7 +153,6 @@ async def execute_plan(
         prompt=execution_prompt,
         system_prompt=EXECUTION_PHASE_SYSTEM_PROMPT,
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
-        permission_mode="acceptEdits",  # Auto-approve edits without asking
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
         session_id=session_id,

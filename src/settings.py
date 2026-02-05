@@ -49,7 +49,7 @@ class LoggingSettings(BaseModel):
 
 
 class AppCoreSettings(BaseModel):
-    workspace_path: Path
+    workspace_path: Path | None = None
     base_branch: str
 
     model_config = ConfigDict(extra="forbid")

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.agents.base import print_agent_message, run_agent_query
+from src.agents.base import extract_session_id, print_agent_message, run_agent_query
 from src.shell.pre_commit_runner import run_pre_commit
 
 SYSTEM_PROMPT = """
@@ -21,6 +21,7 @@ CRITICAL RULES:
 type checking)
 - Apply fixes to the files that failed the pre-commit checks
 - Be precise and minimal - only change what's necessary to pass the hooks
+- NEVER run pre-commit with --all-files flag. ONLY run on staged files.
 
 WORKFLOW:
 1. Read the error messages carefully to understand what needs to be fixed
@@ -31,6 +32,7 @@ black expects)
 you modified
 5. Only stage the files you actually fixed - do not stage unrelated changes
 6. After staging fixes, run `pre-commit run` again to verify your fixes worked
+   (NEVER use --all-files)
 7. If pre-commit still fails, analyze the new errors and fix them
 8. Retry this fix-and-verify cycle up to {max_retries} times total
 9. If pre-commit passes, you're done - stop retrying
@@ -47,17 +49,17 @@ async def verify_pre_commit_and_fix(
     workspace_path: Path, max_retries: int = 5, mcp_config_path: Path | None = None
 ) -> bool:
     """
-    Verify pre-commit hooks pass, fixing issues if needed.
+    Verify pre-commit hooks pass on STAGED FILES ONLY, fixing issues if needed.
 
     This function:
-    1. Runs pre-commit hooks on staged files
+    1. Runs pre-commit hooks on staged files ONLY (never --all-files)
     2. If successful, returns True
     3. If failed, uses AI to fix the issues (AI will stage its own fixes and retry)
 
     Args:
-        git: EnhancedGit instance for staging changes
         workspace_path: Path to the workspace root
         max_retries: Maximum number of retry attempts to tell the AI (default: 5)
+        mcp_config_path: Optional path to MCP config file
 
     Returns:
         True if pre-commit passes, False otherwise
@@ -73,6 +75,7 @@ async def verify_pre_commit_and_fix(
         pre_commit_output=result.output,
     )
 
+    session_id = None
     async for message in run_agent_query(
         prompt=prompt,
         system_prompt=system_prompt,
@@ -81,6 +84,10 @@ async def verify_pre_commit_and_fix(
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
     ):
+        if session_id is None:
+            session_id = extract_session_id(message)
+            if session_id:
+                continue
         print_agent_message(message)
 
     final_result = run_pre_commit(workspace_path)

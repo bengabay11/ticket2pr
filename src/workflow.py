@@ -30,6 +30,7 @@ async def workflow(
     git: EnhancedGit,
     base_branch: str,
     mcp_config_path: Path | None = None,
+    commit_no_verify: bool = False,
 ) -> WorkflowResult:
     logger.info("Fetching Jira issue: %s", jira_issue_key)
     issue = jira_client.fetch_issue(jira_issue_key)
@@ -46,12 +47,21 @@ async def workflow(
     session_id = await try_solve_ticket(
         issue, workspace_path=git.repo_path, mcp_config_path=mcp_config_path
     )
-    if is_pre_commit_installed():
+    if commit_no_verify:
+        logger.info("Skipping pre-commit verification: --commit-no-verify flag is set")
+    elif is_pre_commit_installed():
         logger.info("pre-commit is installed. Trying to run it")
         result = run_pre_commit(git.repo_path)
         if not result.success:
             logger.info("pre-commit failed. trying to fix it (workspace: %s)", git.repo_path)
-            await verify_pre_commit_and_fix(git.repo_path, mcp_config_path=mcp_config_path)
+            commit_no_verify = not await verify_pre_commit_and_fix(
+                git.repo_path, mcp_config_path=mcp_config_path
+            )
+            if commit_no_verify:
+                logger.warning(
+                    "pre-commit verification failed after fix attempts. "
+                    "Will commit with --no-verify"
+                )
         else:
             logger.info("Skipping pre-commit fix: pre-commit is is already passing")
     else:
@@ -65,7 +75,7 @@ async def workflow(
         branch_name,
         commit_message.split("\n")[0] if commit_message else "N/A",
     )
-    git.commit_and_push(commit_message)
+    git.commit_and_push(commit_message, no_verify=commit_no_verify)
     logger.info("Generating PR title for issue: %s", issue.key)
     pr_title = generate_pr_title_from_jira_issue(issue)
     logger.info("Creating PR: title='%s', head=%s, base=%s", pr_title, branch_name, base_branch)
