@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import Self
 
 import git
+from typing_extensions import Self
 
 from src.exceptions import (
     GitCloneError,

@@ -3,7 +3,7 @@ name = "ticket2pr"
 version = "0.3.4"
 description = "Automate Jira ticket to GitHub PR workflow"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "claude-agent-sdk>=0.1.25",
     "colorlog>=6.9.0",
@@ -16,6 +16,7 @@ dependencies = [
     "rich>=14.0.0",
     "tomli-w>=1.2.0",
     "typer>=0.21.1",
+    "typing_extensions>=4.0.0",
 ]
 
 [project.scripts]

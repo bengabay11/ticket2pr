@@ -2,10 +2,10 @@ import abc
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Self
 
 import colorlog
 from pydantic import BaseModel, Field, field_validator, model_validator
+from typing_extensions import Self
 
 LOG_COLORS = {
     "DEBUG": "white",
@@ -43,7 +43,9 @@ class SetupLoggerParams(BaseModel):
     @field_validator("level")
     @classmethod
     def validate_log_level_string(cls, value: str) -> str:
-        valid_levels = set(logging.getLevelNamesMapping())
+        # logging.logging.getLevelNamesMapping() is not being used here because
+        # it's new in Python 3.11
+        valid_levels = logging._nameToLevel
         if value.upper() not in valid_levels:
             msg = f"'level' must be one of: {valid_levels}. Got '{value}'."
             raise ValueError(msg)

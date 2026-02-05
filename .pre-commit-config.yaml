@@ -70,3 +70,9 @@ repos:
     hooks:
       - id: python-bandit-vulnerability-check
         args: [--quiet, --skip, "B101", --recursive, src]
+
+  - repo: https://github.com/netromdk/vermin
+    rev: v1.8.0
+    hooks:
+      - id: vermin
+        args: ["-t=3.10-", "--violations"]
