@@ -98,7 +98,9 @@ def _setup_workspace(
     temp_dir: Path | None = None
     try:
         if workspace_path is None:
-            temp_dir = Path(tempfile.mkdtemp(prefix="ticket2pr_"))
+            shared_temp_dir = Path(tempfile.gettempdir()) / "ticket2pr"
+            shared_temp_dir.mkdir(exist_ok=True)
+            temp_dir = Path(tempfile.mkdtemp(dir=shared_temp_dir))
             logger.info(
                 "No workspace path provided, cloning repository to temp directory: %s", temp_dir
             )
