@@ -35,6 +35,7 @@ setup(
         "python-dotenv>=1.1.0",
         "rich>=14.0.0",
         "tomli-w>=1.2.0",
+        "typing_extensions>=4.0.0",
         "typer>=0.21.1",
     ],
     extras_require={
