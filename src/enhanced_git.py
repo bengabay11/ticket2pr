@@ -5,7 +5,7 @@ import git
 
 from src.exceptions import (
     GitCloneError,
-    GitFetchCheckoutError,
+    GitFetchCheckoutUnknownError,
     GitPushError,
     GitWorkspacePathNotExistsError,
     LocalBranchAlreadyExistsError,
@@ -76,19 +76,15 @@ class EnhancedGit:
             LocalBranchAlreadyExistsError: If the branch already exists locally
             GitFetchCheckoutError: If a git error occurs
         """
-        try:
-            origin = self.repo.remotes.origin
-            origin.fetch()
-        except Exception as e:
-            raise GitFetchCheckoutError from e
-
         if branch_name in self.repo.heads:
             raise LocalBranchAlreadyExistsError(branch_name)
 
         try:
+            origin = self.repo.remotes.origin
+            origin.fetch()
             self.repo.git.checkout(branch_name)
         except Exception as e:
-            raise GitFetchCheckoutError from e
+            raise GitFetchCheckoutUnknownError(str(e)) from e
 
     def add_all_changes(self) -> None:
         """

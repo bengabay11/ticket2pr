@@ -26,6 +26,7 @@ from src.console_utils import (
     print_warning,
 )
 from src.enhanced_git import EnhancedGit
+from src.exceptions import GitCloneError
 from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
 from src.settings import AppSettings
 
@@ -104,7 +105,14 @@ def _setup_workspace(
             logger.info(
                 "No workspace path provided, cloning repository to temp directory: %s", temp_dir
             )
-            local_git = EnhancedGit.clone_repo(github_client.clone_url, temp_dir)
+            try:
+                logger.info("Attempting to clone via SSH: %s", github_client.ssh_url)
+                local_git = EnhancedGit.clone_repo(github_client.ssh_url, temp_dir)
+            except GitCloneError:
+                logger.warning(
+                    "SSH clone failed, falling back to HTTPS: %s", github_client.clone_url
+                )
+                local_git = EnhancedGit.clone_repo(github_client.clone_url, temp_dir)
             logger.info("Repository cloned successfully")
             yield local_git, temp_dir
         else:
@@ -112,7 +120,10 @@ def _setup_workspace(
     finally:
         if temp_dir and temp_dir.exists():
             logger.info("Cleaning up temp directory: %s", temp_dir)
-            shutil.rmtree(temp_dir)
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning("Failed to clean up temp directory '%s': %s", temp_dir, e)
 
 
 async def workflow_with_prints(

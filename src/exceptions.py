@@ -15,8 +15,12 @@ class GitWorkspacePathNotExistsError(EnhancedGitError):
 
 
 class GitFetchCheckoutError(EnhancedGitError):
-    def __init__(self) -> None:
-        super().__init__("Failed to fetch and checkout branch")
+    pass
+
+
+class GitFetchCheckoutUnknownError(GitFetchCheckoutError):
+    def __init__(self, error_msg: str) -> None:
+        super().__init__(f"Failed to fetch and checkout branch: {error_msg}")
 
 
 class LocalBranchAlreadyExistsError(GitFetchCheckoutError):
