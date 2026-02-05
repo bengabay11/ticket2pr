@@ -98,7 +98,9 @@ def _setup_workspace(
     temp_dir: Path | None = None
     try:
         if workspace_path is None:
-            temp_dir = Path(tempfile.mkdtemp(prefix="ticket2pr_"))
+            shared_temp_dir = Path(tempfile.gettempdir()) / "ticket2pr"
+            shared_temp_dir.mkdir(exist_ok=True)
+            temp_dir = Path(tempfile.mkdtemp(dir=shared_temp_dir))
             logger.info(
                 "No workspace path provided, cloning repository to temp directory: %s", temp_dir
             )
@@ -110,7 +112,10 @@ def _setup_workspace(
     finally:
         if temp_dir and temp_dir.exists():
             logger.info("Cleaning up temp directory: %s", temp_dir)
-            shutil.rmtree(temp_dir)
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning("Failed to clean up temp directory '%s': %s", temp_dir, e)
 
 
 async def workflow_with_prints(
