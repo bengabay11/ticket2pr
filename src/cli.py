@@ -101,7 +101,9 @@ def _setup_workspace(
         if workspace_path is None:
             shared_temp_dir = Path(tempfile.gettempdir()) / "ticket2pr"
             shared_temp_dir.mkdir(exist_ok=True)
-            temp_dir = Path(tempfile.mkdtemp(dir=shared_temp_dir))
+            temp_dir = Path(
+                tempfile.mkdtemp(dir=shared_temp_dir, prefix=f"{github_client.repo.name}_")
+            )
             logger.info(
                 "No workspace path provided, cloning repository to temp directory: %s", temp_dir
             )

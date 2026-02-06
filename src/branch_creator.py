@@ -4,7 +4,6 @@ from datetime import datetime
 
 from src.clients.github_client import GitHubClient
 from src.clients.jira_client import JiraClient, JiraIssue
-from src.exceptions import GithubBranchAlreadyExistsError
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +31,15 @@ def generate_branch_name(
     if issue_type:
         branch_name = f"{issue_type.lower()}/{branch_name}"
 
-    if len(branch_name) > max_length:
-        branch_name = branch_name[:max_length].rstrip("-")
+    # Add timestamp suffix to ensure uniqueness and avoid an extra
+    # API call to check if branch exists
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    suggested_branch_name = f"{branch_name}-{timestamp}"
+    if len(suggested_branch_name) > max_length:
+        chars_count_to_remove = len(suggested_branch_name) - max_length
+        branch_name = branch_name[:-chars_count_to_remove]
 
-    return branch_name
+    return f"{branch_name}-{timestamp}"
 
 
 def create_branch_from_jira_issue(
@@ -48,20 +52,7 @@ def create_branch_from_jira_issue(
     # TODO: Consider replacing the 2 next lines with local git client
     base_ref = github_client.get_base_branch_ref(base_branch)
 
-    try:
-        branch_url = github_client.create_branch(branch_name, base_ref)
-    except GithubBranchAlreadyExistsError:
-        # Branch already exists, add timestamp suffix and retry
-        original_branch_name = branch_name
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        branch_name = f"{branch_name}-{timestamp}"
-        logger.info(
-            "Branch '%s' already exists. Retrying with new name: '%s'",
-            original_branch_name,
-            branch_name,
-        )
-        branch_url = github_client.create_branch(branch_name, base_ref)
-
+    branch_url = github_client.create_branch(branch_name, base_ref)
     jira_client.link_branch(jira_issue.key, branch_url, branch_name)
 
     return branch_name

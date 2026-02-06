@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from src.agents.base import extract_session_id, print_agent_message, run_agent_query
-from src.shell.pre_commit_runner import run_pre_commit
+from src.agents.base import print_agent_message, run_agent_query
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer specializing in fixing pre-commit hook failures.
@@ -13,6 +12,8 @@ Your role is to:
 4. Preserve the original functionality and purpose of the changes
 
 CRITICAL RULES:
+- You MUST address ALL pre-commit issues reported - do not miss any errors or warnings
+- Carefully parse the entire pre-commit output and fix every single issue mentioned
 - Only fix formatting, linting, type errors, and other pre-commit hook violations
 - DO NOT change the logic or functionality of the code
 - DO NOT add new features or remove existing functionality
@@ -45,37 +46,29 @@ Pre-commit output:
 """
 
 
-async def verify_pre_commit_and_fix(
-    workspace_path: Path, max_retries: int = 5, mcp_config_path: Path | None = None
-) -> bool:
+async def try_fix_pre_commit(
+    workspace_path: Path,
+    pre_commit_output: str,
+    max_retries: int = 5,
+    mcp_config_path: Path | None = None,
+) -> None:
     """
-    Verify pre-commit hooks pass on STAGED FILES ONLY, fixing issues if needed.
+    Attempt to fix pre-commit hook failures using AI.
 
-    This function:
-    1. Runs pre-commit hooks on staged files ONLY (never --all-files)
-    2. If successful, returns True
-    3. If failed, uses AI to fix the issues (AI will stage its own fixes and retry)
+    This function uses AI to analyze pre-commit failures and apply fixes.
+    The caller is responsible for running pre-commit before and after to verify.
 
     Args:
         workspace_path: Path to the workspace root
-        max_retries: Maximum number of retry attempts to tell the AI (default: 5)
+        pre_commit_output: The output from a failed pre-commit run
+        max_retries: Maximum number of retry attempts for the AI (default: 5)
         mcp_config_path: Optional path to MCP config file
-
-    Returns:
-        True if pre-commit passes, False otherwise
     """
-    result = run_pre_commit(workspace_path)
-
-    if result.success:
-        return True
-
     system_prompt = SYSTEM_PROMPT.format(max_retries=max_retries)
-
     prompt = PROMPT_TEMPLATE.format(
-        pre_commit_output=result.output,
+        pre_commit_output=pre_commit_output,
     )
 
-    session_id = None
     async for message in run_agent_query(
         prompt=prompt,
         system_prompt=system_prompt,
@@ -84,11 +77,4 @@ async def verify_pre_commit_and_fix(
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
     ):
-        if session_id is None:
-            session_id = extract_session_id(message)
-            if session_id:
-                continue
         print_agent_message(message)
-
-    final_result = run_pre_commit(workspace_path)
-    return final_result.success
