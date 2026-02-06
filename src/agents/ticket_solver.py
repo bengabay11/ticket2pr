@@ -66,6 +66,8 @@ CRITICAL RULES FOR THIS PHASE:
 - Only modify/create files that are listed in the plan
 - Maintain existing code style and patterns
 - Add appropriate error handling and validation if needed
+- Write code that conforms to the project's configured linters, formatters, and type checkers
+- DO NOT write new tests - a separate agent handles test writing if needed
 - After making changes, use `git add` to stage ONLY the files listed in the plan
 - DO NOT git add any temporary or helper files you created for your own use (e.g., JSON files
   describing violations, test scripts for debugging, analysis files, scratch files, etc.)
@@ -88,6 +90,52 @@ Description:
 
 Plan:
 {plan_content}
+"""
+
+TEST_WRITER_PHASE_SYSTEM_PROMPT = """
+You are an expert Software Engineer evaluating whether tests are needed for recent code changes.
+
+CRITICAL: In MOST cases, new tests are NOT needed. Only add tests in these rare situations:
+1. New complex or risky logic that doesn't have existing test coverage
+2. Entirely new modules or components with no tests
+
+DO NOT add tests for:
+- Simple changes, bug fixes, or refactors
+- Code that is already covered by existing tests
+- Configuration changes
+- Changes to existing well-tested code
+- Minor feature additions to tested modules
+
+Your role:
+1. Review the staged changes (git diff --cached)
+2. Check existing test coverage for the modified areas
+3. ONLY if one of the rare situations above applies, write minimal focused tests
+4. If you add tests, use `git add` to stage them
+
+CRITICAL RULES:
+- Default to NOT writing tests - most changes don't need them
+- If existing tests cover the changes, do nothing
+- If you write tests, keep them minimal and focused
+- Follow existing test patterns in the codebase
+- After writing tests, use `git add` to stage ONLY the test files you created
+- DO NOT git add any temporary or helper files you created for your own use
+- If you create any temporary helper files, delete them before finishing
+"""
+
+TEST_WRITER_PHASE_PROMPT_TEMPLATE = """
+Review the staged changes and determine if new tests are truly needed.
+
+Issue Key: {issue_key}
+Summary: {summary}
+
+Remember: Most changes do NOT need new tests. Only add tests for new complex/risky logic
+without existing coverage, or entirely new modules.
+
+Steps:
+1. Run `git diff --cached` to see what was changed
+2. Check if existing tests already cover these changes
+3. Only if truly needed (rare), write minimal tests
+4. Run `git add` to stage ONLY the test files you created
 """
 
 
@@ -163,20 +211,55 @@ async def execute_plan(
         print_agent_message(message)
 
 
+async def write_tests_if_needed(
+    issue: JiraIssue,
+    session_id: str,
+    workspace_path: Path | None = None,
+    mcp_config_path: Path | None = None,
+) -> None:
+    """
+    Evaluate staged changes and add tests only if truly needed.
+
+    Tests are only added in rare cases:
+    - New complex/risky logic without existing test coverage
+    - Entirely new modules or components
+    """
+    issue_context = {
+        "issue_key": issue.key,
+        "summary": issue.summary,
+    }
+    test_writer_prompt = TEST_WRITER_PHASE_PROMPT_TEMPLATE.format(**issue_context)
+
+    async for message in run_agent_query(
+        prompt=test_writer_prompt,
+        system_prompt=TEST_WRITER_PHASE_SYSTEM_PROMPT,
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
+        cwd=workspace_path,
+        mcp_config_path=mcp_config_path,
+        session_id=session_id,
+    ):
+        print_agent_message(message)
+
+
 async def try_solve_ticket(
-    issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
+    issue: JiraIssue,
+    workspace_path: Path | None = None,
+    mcp_config_path: Path | None = None,
+    enable_test_writer: bool = False,
 ) -> str:
     """
     Solve a Jira ticket using a Plan-Act workflow with Claude Agent SDK.
 
-    The workflow consists of two phases:
+    The workflow consists of phases:
     1. Planning Phase: Explore codebase and create PLAN.md with implementation details
-    2. Execution Phase: Implement the plan and run tests
+    2. Execution Phase: Implement the plan
+    3. Test Writing Phase (optional): Add tests only if truly needed (rare cases)
 
     Args:
         issue: The JiraIssue object containing all issue details
         workspace_path: Optional path to workspace root. Defaults to current directory.
         mcp_config_path: Optional path to mcp.json configuration file.
+        enable_test_writer: Whether to run the test writer phase. Defaults to False.
 
     Returns:
         The session_id from the conversation
@@ -186,4 +269,7 @@ async def try_solve_ticket(
         "Plan file created at - %s. Now running the executor agent to implement it.", str(plan_path)
     )
     await execute_plan(issue, session_id, plan_path, workspace_path, mcp_config_path)
+    if enable_test_writer:
+        logger.info("Evaluating if new tests are needed for the changes.")
+        await write_tests_if_needed(issue, session_id, workspace_path, mcp_config_path)
     return session_id
