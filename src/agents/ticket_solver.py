@@ -244,7 +244,7 @@ async def try_solve_ticket(
     issue: JiraIssue,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
-    enable_test_writer: bool = True,
+    enable_test_writer: bool = False,
 ) -> str:
     """
     Solve a Jira ticket using a Plan-Act workflow with Claude Agent SDK.
