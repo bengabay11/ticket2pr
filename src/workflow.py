@@ -4,7 +4,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from src.agents.pr_generator import generate_commit_and_pr_body
-from src.agents.pre_commit_fixer import verify_pre_commit_and_fix
+from src.agents.pre_commit_fixer import try_fix_pre_commit as try_fix_pre_commit_agent
 from src.agents.ticket_solver import try_solve_ticket
 from src.branch_creator import create_branch_from_jira_issue
 from src.clients.github_client import GitHubClient
@@ -21,6 +21,48 @@ class WorkflowResult(BaseModel):
     pr_number: int
     pr_url: str
     jira_issue_permalink: str
+
+
+async def try_fix_pre_commit(
+    git: EnhancedGit, mcp_config_path: Path | None = None, retries: int = 3
+) -> bool:
+    """
+    Try to run pre-commit and fix any failures with retries.
+
+    Returns:
+        True if pre-commit passes, False if it still fails after all retries.
+    """
+    result = run_pre_commit(git.repo_path)
+
+    if result.success:
+        logger.info("pre-commit passed on first run")
+        return True
+
+    for attempt in range(1, retries + 1):
+        logger.info(
+            "pre-commit failed (attempt %d/%d). Trying to fix it (workspace: %s)",
+            attempt,
+            retries,
+            git.repo_path,
+        )
+        await try_fix_pre_commit_agent(
+            git.repo_path,
+            pre_commit_output=result.output,
+            mcp_config_path=mcp_config_path,
+        )
+
+        result = run_pre_commit(git.repo_path)
+        if result.success:
+            logger.info("pre-commit passed after fix attempt %d", attempt)
+            return True
+
+        logger.warning("pre-commit still failing after fix attempt %d/%d", attempt, retries)
+
+    logger.warning(
+        "pre-commit verification failed after %d fix attempts. Will commit with --no-verify",
+        retries,
+    )
+    return False
 
 
 async def workflow(
@@ -50,20 +92,8 @@ async def workflow(
     if commit_no_verify:
         logger.info("Skipping pre-commit verification: --commit-no-verify flag is set")
     elif is_pre_commit_installed():
-        logger.info("pre-commit is installed. Trying to run it")
-        result = run_pre_commit(git.repo_path)
-        if not result.success:
-            logger.info("pre-commit failed. trying to fix it (workspace: %s)", git.repo_path)
-            commit_no_verify = not await verify_pre_commit_and_fix(
-                git.repo_path, mcp_config_path=mcp_config_path
-            )
-            if commit_no_verify:
-                logger.warning(
-                    "pre-commit verification failed after fix attempts. "
-                    "Will commit with --no-verify"
-                )
-        else:
-            logger.info("Skipping pre-commit fix: pre-commit is is already passing")
+        logger.info("pre-commit is installed. Trying to run it and fix any failures.")
+        await try_fix_pre_commit(git, mcp_config_path=mcp_config_path)
     else:
         logger.info("Skipping pre-commit verification: pre-commit is not installed")
     logger.info("Generating commit message and PR body for branch: %s", branch_name)
