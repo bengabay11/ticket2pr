@@ -132,7 +132,8 @@ without existing coverage, or entirely new modules.
 Steps:
 1. Run `git diff --cached` to see what was changed
 2. Check if existing tests already cover these changes
-3. Only if truly needed (rare), add minimal tests and stage them
+3. Only if truly needed (rare), write minimal tests
+4. Run `git add` to stage ONLY the test files you created
 """
 
 
