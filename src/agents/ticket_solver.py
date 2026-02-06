@@ -66,6 +66,7 @@ CRITICAL RULES FOR THIS PHASE:
 - Only modify/create files that are listed in the plan
 - Maintain existing code style and patterns
 - Add appropriate error handling and validation if needed
+- DO NOT write new tests - a separate agent handles test writing if needed
 - After making changes, use `git add` to stage ONLY the files listed in the plan
 - DO NOT git add any temporary or helper files you created for your own use (e.g., JSON files
   describing violations, test scripts for debugging, analysis files, scratch files, etc.)
