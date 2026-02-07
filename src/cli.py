@@ -7,6 +7,7 @@ import sys
 import tempfile
 from collections.abc import Generator
 from contextlib import contextmanager
+from importlib.metadata import version as get_package_version
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -35,6 +36,13 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from src.clients.github_client import GitHubClient
     from src.clients.jira_client import JiraClient
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"ticket2pr {get_package_version('ticket2pr')}")
+        raise typer.Exit
+
 
 app = typer.Typer(
     name="ticket2pr",
@@ -260,7 +268,17 @@ def settings_exist() -> bool:
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context) -> None:
+def main(
+    ctx: typer.Context,
+    version: bool = typer.Option(  # noqa: ARG001
+        False,
+        "--version",
+        "-v",
+        help="Show version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
     if not settings_exist():
         _init()
         sys.exit(0)
