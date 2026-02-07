@@ -137,6 +137,7 @@ async def workflow_with_prints(
     local_git: EnhancedGit,
     mcp_config_path: Path | None = None,
     commit_no_verify: bool = False,
+    fix_tests: bool = False,
 ) -> None:
     header_msg = f"Running workflow for {format_yellow(jira_issue_key)}"
     print_info(header_msg)
@@ -155,6 +156,7 @@ async def workflow_with_prints(
         base_branch=base_branch,
         mcp_config_path=mcp_config_path,
         commit_no_verify=commit_no_verify,
+        fix_tests=fix_tests,
     )
 
     success_msg = format_success_with_checkmark("Workflow completed successfully!")
@@ -184,6 +186,12 @@ def run(
         "--commit-no-verify",
         "-c",
         help="bypass pre-commit and commit-msg hooks when committing (git commit --no-verify)",
+    ),
+    fix_tests: bool = typer.Option(
+        False,
+        "--fix-tests",
+        "-t",
+        help="plan and run tests from staged changes, fix failures, then stage only fix changes",
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
@@ -222,6 +230,7 @@ def run(
                     local_git,
                     mcp_config_path,
                     commit_no_verify,
+                    fix_tests,
                 )
             )
         except KeyboardInterrupt:
