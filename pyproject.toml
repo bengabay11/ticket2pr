@@ -1,6 +1,6 @@
 [project]
 name = "ticket2pr"
-version = "0.3.6"
+version = "0.3.7"
 description = "Automate Jira ticket to GitHub PR workflow"
 readme = "README.md"
 requires-python = ">=3.10"

@@ -25,6 +25,17 @@ def is_pre_commit_installed() -> bool:
     return find_pre_commit_executable() is not None
 
 
+def has_pre_commit_config(workspace_path: Path) -> bool:
+    """
+    Check if .pre-commit-config.yaml exists and is a file in the workspace.
+
+    Returns:
+        True if .pre-commit-config.yaml exists and is a file, False otherwise
+    """
+    config_path = workspace_path.expanduser() / ".pre-commit-config.yaml"
+    return config_path.is_file()
+
+
 def run_pre_commit(workspace_path: Path) -> CommandResult:
     """
     Run pre-commit hooks on staged files and return the result.
