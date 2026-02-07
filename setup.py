@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="ticket2pr",
-    version="0.3.7",
+    version="0.3.8",
     author="Ben Gabay",
     author_email="ben.gabay38@gmail.com",
     description="Automate Jira ticket to GitHub PR workflow",
