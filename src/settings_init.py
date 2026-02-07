@@ -134,6 +134,7 @@ def _collect_jira_settings() -> tuple[str, str, str]:
         "Jira API token",
         lambda v: validate_non_empty(v, "API token"),
         password=True,
+        hint=" (generate at https://id.atlassian.com/manage-profile/security/api-tokens)",
     )
 
     return jira_base_url, jira_username, jira_api_token
@@ -145,6 +146,7 @@ def _collect_github_settings() -> tuple[str, str]:
         "GitHub personal access token",
         lambda v: validate_non_empty(v, "API token"),
         password=True,
+        hint=" (generate at https://github.com/settings/tokens)",
     )
 
     repo_full_name = _prompt_with_validation(
