@@ -65,13 +65,13 @@ def _show_success(config_path: Path) -> None:
     print_success(f"{success_msg}\n\n{config_msg}\n")
 
 
-def _prompt_with_validation[T](
+def _prompt_with_validation(
     prompt_text: str,
-    validator: Callable[[str], T],
+    validator: Callable[[str], str],
     default: str | None = None,
     password: bool = False,
     hint: str | None = None,
-) -> T:
+) -> str:
     formatted_prompt = format_cyan(prompt_text)
     if hint:
         formatted_prompt += format_dim(hint)
