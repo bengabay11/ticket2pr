@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="ticket2pr",
-    version="0.3.9",
+    version="0.3.10",
     author="Ben Gabay",
     author_email="ben.gabay38@gmail.com",
     description="Automate Jira ticket to GitHub PR workflow",
@@ -30,7 +30,7 @@ setup(
         "gitpython>=3.1.46",
         "jira>=3.10.5",
         "pydantic>=2.11.5",
-        "pydantic-settings>=2.9.1",
+        "pydantic-settings[toml]>=2.9.1",
         "pygithub>=2.8.1",
         "python-dotenv>=1.1.0",
         "rich>=14.0.0",
