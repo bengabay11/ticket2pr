@@ -171,7 +171,11 @@ async def workflow_with_prints(
 
 @app.command()
 def run(
-    jira_issue_key: str = typer.Argument(..., help="Jira issue key (e.g., PROJ-123)"),
+    jira_issue: str = typer.Argument(
+        ...,
+        help="Jira issue key (e.g., PROJ-123) or Jira issue URL "
+        "(e.g., https://company.atlassian.net/browse/PROJ-123)",
+    ),
     workspace_path: Path | None = typer.Option(  # noqa: B008
         None, "--workspace-path", "-w", help="Workspace path (overrides settings)"
     ),
@@ -195,6 +199,14 @@ def run(
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
+    from src.validators import parse_jira_input
+
+    # Parse the input - could be a key or URL
+    try:
+        jira_issue_key = parse_jira_input(jira_issue)
+    except ValueError as e:
+        print_error_inline(f"Invalid Jira issue input: {e}")
+        sys.exit(1)
 
     settings = _load_settings()
 
