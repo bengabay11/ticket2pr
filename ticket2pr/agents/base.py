@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from claude_agent_sdk import (
 )
 
 from ticket2pr.exceptions import AgentQueryUnknownError
+
+logger = logging.getLogger(__name__)
 
 
 def extract_session_id(message: Message) -> str | None:
@@ -147,6 +150,7 @@ async def run_agent_query(
     permission_mode: PermissionMode = "bypassPermissions",
     cwd: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     session_id: str | None = None,
 ) -> AsyncGenerator[Message]:
     """
@@ -163,6 +167,8 @@ async def run_agent_query(
                         to allow full access without prompts.
         cwd: Optional current working directory for the agent to run from.
         mcp_config_path: Optional path to mcp.json configuration file for MCP servers.
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow
+            (e.g. ``["mcp__my-server__*", "mcp__other__specific_tool"]``).
     """
     optional_kwargs: dict[str, Any] = {}
     if cwd is not None:
@@ -172,8 +178,12 @@ async def run_agent_query(
     if session_id is not None:
         optional_kwargs["resume"] = session_id
 
+    effective_allowed_tools = list(allowed_tools)
+    if allowed_mcp_tools:
+        effective_allowed_tools.extend(allowed_mcp_tools)
+
     options = ClaudeAgentOptions(
-        allowed_tools=allowed_tools,
+        allowed_tools=effective_allowed_tools,
         system_prompt=system_prompt,
         permission_mode=permission_mode,
         **optional_kwargs,

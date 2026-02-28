@@ -37,7 +37,10 @@ class WorkflowResult(BaseModel):
 
 
 async def try_fix_pre_commit(
-    git: EnhancedGit, mcp_config_path: Path | None = None, retries: int = 3
+    git: EnhancedGit,
+    mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
+    retries: int = 3,
 ) -> bool:
     """
     Try to run pre-commit and fix any failures with retries.
@@ -62,6 +65,7 @@ async def try_fix_pre_commit(
             git.repo_path,
             pre_commit_output=result.output,
             mcp_config_path=mcp_config_path,
+            allowed_mcp_tools=allowed_mcp_tools,
         )
 
         result = run_pre_commit(git.repo_path)
@@ -85,6 +89,7 @@ async def workflow(
     git: EnhancedGit,
     base_branch: str,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     commit_no_verify: bool = False,
     fix_tests: bool = False,
 ) -> WorkflowResult:
@@ -106,11 +111,12 @@ async def workflow(
             git=git,
             base_branch=base_branch,
             mcp_config_path=mcp_config_path,
+            allowed_mcp_tools=allowed_mcp_tools,
             commit_no_verify=commit_no_verify,
             fix_tests=fix_tests,
         )
     except Exception as exc:
-        duration = humanize.naturaldelta(time.monotonic() - start_time)
+        duration = humanize.precisedelta(time.monotonic() - start_time, minimum_unit="seconds")
         logger.exception("Workflow failed for %s", jira_issue_key)
         comment = build_failure_comment(
             repo_name=repo_name,
@@ -122,7 +128,7 @@ async def workflow(
         post_jira_comment(jira_client, jira_issue_key, comment)
         raise
 
-    duration = humanize.naturaldelta(time.monotonic() - start_time)
+    duration = humanize.precisedelta(time.monotonic() - start_time, minimum_unit="seconds")
     comment = build_success_comment(
         repo_name=repo_name,
         repo_url=repo_url,
@@ -142,6 +148,7 @@ async def _run_workflow(
     git: EnhancedGit,
     base_branch: str,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     commit_no_verify: bool = False,
     fix_tests: bool = False,
 ) -> WorkflowResult:
@@ -158,13 +165,17 @@ async def _run_workflow(
     git.fetch_and_checkout_branch(branch_name)
     logger.info("Solving ticket: %s (workspace: %s)", issue.key, git.repo_path)
     session_id = await try_solve_ticket(
-        issue, workspace_path=git.repo_path, mcp_config_path=mcp_config_path
+        issue,
+        workspace_path=git.repo_path,
+        mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     )
     if fix_tests:
         logger.info("Running and fixing tests from staged changes.")
         await try_fix_tests(
             workspace_path=git.repo_path,
             mcp_config_path=mcp_config_path,
+            allowed_mcp_tools=allowed_mcp_tools,
         )
     if commit_no_verify:
         logger.info("Skipping pre-commit verification: --commit-no-verify flag is set")
@@ -176,10 +187,15 @@ async def _run_workflow(
         logger.info("Skipping pre-commit verification: pre-commit is not installed")
     else:
         logger.info("pre-commit is installed. Trying to run it and fix any failures.")
-        await try_fix_pre_commit(git, mcp_config_path=mcp_config_path)
+        await try_fix_pre_commit(
+            git, mcp_config_path=mcp_config_path, allowed_mcp_tools=allowed_mcp_tools
+        )
     logger.info("Generating commit message and PR body for branch: %s", branch_name)
     commit_message, pr_body = await generate_commit_and_pr_body(
-        session_id=session_id, workspace_path=git.repo_path, mcp_config_path=mcp_config_path
+        session_id=session_id,
+        workspace_path=git.repo_path,
+        mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     )
     logger.info(
         "Committing and pushing to branch: %s (commit message: %s)",

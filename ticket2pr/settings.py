@@ -51,6 +51,8 @@ class LoggingSettings(BaseModel):
 class AppCoreSettings(BaseModel):
     workspace_path: Path | None = None
     base_branch: str
+    mcp_config_path: Path | None = None
+    allowed_mcp_tools: list[str] = []
 
     model_config = ConfigDict(extra="forbid")
 

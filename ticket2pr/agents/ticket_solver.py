@@ -140,7 +140,10 @@ Steps:
 
 
 async def plan_ticket(
-    issue: JiraIssue, workspace_path: Path | None = None, mcp_config_path: Path | None = None
+    issue: JiraIssue,
+    workspace_path: Path | None = None,
+    mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
 ) -> tuple[Path, str]:
     final_workspace_path = workspace_path.expanduser() if workspace_path else Path.cwd()
     plan_path = final_workspace_path / "PLAN.md"
@@ -159,9 +162,10 @@ async def plan_ticket(
     async for message in run_agent_query(
         prompt=planning_prompt,
         system_prompt=PLANNING_PHASE_SYSTEM_PROMPT,
-        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Can write PLAN.md
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     ):
         if session_id is None:
             session_id = extract_session_id(message)
@@ -181,6 +185,7 @@ async def execute_plan(
     plan_path: Path,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
 ) -> None:
     if not plan_path.exists():
         raise PlanNotFoundError(plan_path)
@@ -203,9 +208,10 @@ async def execute_plan(
     async for message in run_agent_query(
         prompt=execution_prompt,
         system_prompt=EXECUTION_PHASE_SYSTEM_PROMPT,
-        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],  # Full access
+        allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
         session_id=session_id,
     ):
         print_agent_message(message)
@@ -216,6 +222,7 @@ async def write_tests_if_needed(
     session_id: str,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
 ) -> None:
     """
     Evaluate staged changes and add tests only if truly needed.
@@ -236,6 +243,7 @@ async def write_tests_if_needed(
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
         session_id=session_id,
     ):
         print_agent_message(message)
@@ -245,6 +253,7 @@ async def try_solve_ticket(
     issue: JiraIssue,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     enable_test_writer: bool = False,
 ) -> str:
     """
@@ -259,17 +268,24 @@ async def try_solve_ticket(
         issue: The JiraIssue object containing all issue details
         workspace_path: Optional path to workspace root. Defaults to current directory.
         mcp_config_path: Optional path to mcp.json configuration file.
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow.
         enable_test_writer: Whether to run the test writer phase. Defaults to False.
 
     Returns:
         The session_id from the conversation
     """
-    plan_path, session_id = await plan_ticket(issue, workspace_path, mcp_config_path)
+    plan_path, session_id = await plan_ticket(
+        issue, workspace_path, mcp_config_path, allowed_mcp_tools
+    )
     logger.info(
         "Plan file created at - %s. Now running the executor agent to implement it.", str(plan_path)
     )
-    await execute_plan(issue, session_id, plan_path, workspace_path, mcp_config_path)
+    await execute_plan(
+        issue, session_id, plan_path, workspace_path, mcp_config_path, allowed_mcp_tools
+    )
     if enable_test_writer:
         logger.info("Evaluating if new tests are needed for the changes.")
-        await write_tests_if_needed(issue, session_id, workspace_path, mcp_config_path)
+        await write_tests_if_needed(
+            issue, session_id, workspace_path, mcp_config_path, allowed_mcp_tools
+        )
     return session_id
