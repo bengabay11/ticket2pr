@@ -42,7 +42,7 @@ Homepage = "https://github.com/bengabay11/ticket2pr"
 Repository = "https://github.com/bengabay11/ticket2pr"
 
 [project.scripts]
-ticket2pr = "src.cli:cli_main"
+ticket2pr = "ticket2pr.cli:cli_main"
 
 [tool.hatch.version]
 path = "ticket2pr/__init__.py"

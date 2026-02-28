@@ -5,10 +5,10 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Python Debugger: src.main",
+			"name": "Python Debugger: ticket2pr.main",
 			"type": "debugpy",
 			"request": "launch",
-			"module": "src.main",
+			"module": "ticket2pr.main",
 			"console": "integratedTerminal"
 		}
 	]
