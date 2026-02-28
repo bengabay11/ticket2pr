@@ -54,6 +54,9 @@ class JiraClient:
         except Exception as e:
             raise JiraIssueFetchUnknownError(issue_key) from e
 
+    def add_comment(self, issue_key: str, body: str) -> None:
+        self._client.add_comment(issue_key, body)
+
     def link_branch(self, issue_key: str, branch_url: str, branch_name: str) -> None:
         link_object = {
             "url": branch_url,

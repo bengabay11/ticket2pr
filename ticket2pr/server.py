@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 class WebhookPayload(BaseModel):
     issue_key: str
     repo_full_name: str | None = None
+    base_branch: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -37,9 +38,8 @@ def _run_workflow_in_background(
     github_client: GitHubClient,
     jira_client: JiraClient,
     repo_full_name_override: str | None = None,
+    base_branch_override: str | None = None,
 ) -> None:
-    """Run the full ticket2pr workflow for a single issue. Intended to be
-    called from a background thread so it doesn't block the server."""
     from ticket2pr.workflow import workflow
 
     if repo_full_name_override:
@@ -47,6 +47,8 @@ def _run_workflow_in_background(
             github_token=settings.github.api_token,
             repo_full_name=repo_full_name_override,
         )
+
+    base_branch = base_branch_override or settings.core.base_branch
 
     with setup_workspace(None, settings.core.workspace_path, github_client) as (
         local_git,
@@ -57,7 +59,7 @@ def _run_workflow_in_background(
             "Starting workflow for %s (repo: %s, base branch: %s, local workspace: %s)",
             issue_key,
             repo_name,
-            settings.core.base_branch,
+            base_branch,
             workspace_path,
         )
         result = asyncio.run(
@@ -66,7 +68,7 @@ def _run_workflow_in_background(
                 jira_client=jira_client,
                 jira_issue_key=issue_key,
                 git=local_git,
-                base_branch=settings.core.base_branch,
+                base_branch=base_branch,
             )
         )
         logger.info(
@@ -74,7 +76,7 @@ def _run_workflow_in_background(
             issue_key,
             result.pr_url,
             result.branch_name,
-            settings.core.base_branch,
+            base_branch,
         )
 
 
@@ -85,9 +87,10 @@ def create_app() -> FastAPI:
     @fastapi_app.post("/webhook", status_code=202, response_model=WebhookResponse)
     async def webhook(payload: WebhookPayload) -> WebhookResponse:
         logger.info(
-            "Received webhook for issue: %s (repo: %s)",
+            "Received webhook for issue: %s (repo override: %s, base branch override: %s)",
             payload.issue_key,
-            payload.repo_full_name,
+            payload.repo_full_name or "none",
+            payload.base_branch or "none",
         )
         loop = asyncio.get_running_loop()
         loop.run_in_executor(
@@ -98,6 +101,7 @@ def create_app() -> FastAPI:
             github_client,
             jira_client,
             payload.repo_full_name,
+            payload.base_branch,
         )
         return WebhookResponse(status="accepted", issue_key=payload.issue_key)
 
