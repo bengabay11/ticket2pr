@@ -9,4 +9,4 @@ COPY . .
 # Install project dependencies (from pyproject.toml)
 RUN uv pip install --system --no-cache .
 
-ENTRYPOINT ["python", "-m", "src.main"]
+ENTRYPOINT ["python", "-m", "ticket2pr.main"]
