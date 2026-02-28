@@ -3,16 +3,16 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from src.agents.pr_generator import generate_commit_and_pr_body
-from src.agents.pre_commit_fixer import try_fix_pre_commit as try_fix_pre_commit_agent
-from src.agents.tests_agents import try_fix_tests
-from src.agents.ticket_solver import try_solve_ticket
-from src.branch_creator import create_branch_from_jira_issue
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient
-from src.enhanced_git import EnhancedGit
-from src.pr_content import generate_pr_title_from_jira_issue
-from src.shell.pre_commit_runner import (
+from ticket2pr.agents.pr_generator import generate_commit_and_pr_body
+from ticket2pr.agents.pre_commit_fixer import try_fix_pre_commit as try_fix_pre_commit_agent
+from ticket2pr.agents.tests_agents import try_fix_tests
+from ticket2pr.agents.ticket_solver import try_solve_ticket
+from ticket2pr.branch_creator import create_branch_from_jira_issue
+from ticket2pr.clients.github_client import GitHubClient
+from ticket2pr.clients.jira_client import JiraClient
+from ticket2pr.enhanced_git import EnhancedGit
+from ticket2pr.pr_content import generate_pr_title_from_jira_issue
+from ticket2pr.shell.pre_commit_runner import (
     has_pre_commit_config,
     is_pre_commit_installed,
     run_pre_commit,

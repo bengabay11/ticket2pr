@@ -3,7 +3,7 @@ from github.GithubException import GithubException
 from github.GitRef import GitRef
 from pydantic import BaseModel
 
-from src.exceptions import (
+from ticket2pr.exceptions import (
     FetchGithubBranchServerError,
     FetchGithubBranchUnknownError,
     GithubBranchAlreadyExistsError,

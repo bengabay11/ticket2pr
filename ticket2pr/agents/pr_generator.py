@@ -2,7 +2,7 @@ from pathlib import Path
 
 from claude_agent_sdk import TextBlock
 
-from src.agents.base import print_agent_message, run_agent_query
+from ticket2pr.agents.base import print_agent_message, run_agent_query
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer who writes clear, concise commit messages and PR bodies.

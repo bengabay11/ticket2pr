@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 
 [[package]]
@@ -1369,8 +1369,8 @@ wheels = [
 
 [[package]]
 name = "ticket2pr"
-version = "0.4.0"
-source = { virtual = "." }
+version = "0.4.1"
+source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
     { name = "colorlog" },

@@ -8,10 +8,10 @@ import tomli
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from src.bootstrap import setup, setup_workspace
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient
-from src.settings import AppSettings
+from ticket2pr.bootstrap import setup, setup_workspace
+from ticket2pr.clients.github_client import GitHubClient
+from ticket2pr.clients.jira_client import JiraClient
+from ticket2pr.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def _run_workflow_in_background(
 ) -> None:
     """Run the full ticket2pr workflow for a single issue. Intended to be
     called from a background thread so it doesn't block the server."""
-    from src.workflow import workflow
+    from ticket2pr.workflow import workflow
 
     with setup_workspace(None, settings.core.workspace_path, github_client) as (
         local_git,

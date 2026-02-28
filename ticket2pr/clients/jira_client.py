@@ -1,7 +1,7 @@
 from jira import JIRA, JIRAError
 from pydantic import BaseModel
 
-from src.exceptions import (
+from ticket2pr.exceptions import (
     JiraIssueFetchServerError,
     JiraIssueFetchUnknownError,
     JiraIssueNotFoundError,

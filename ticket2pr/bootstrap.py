@@ -10,13 +10,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient
-from src.console_utils import get_status, print_error
-from src.enhanced_git import EnhancedGit
-from src.exceptions import GitCloneError
-from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
-from src.settings import AppSettings
+from ticket2pr.clients.github_client import GitHubClient
+from ticket2pr.clients.jira_client import JiraClient
+from ticket2pr.console_utils import get_status, print_error
+from ticket2pr.enhanced_git import EnhancedGit
+from ticket2pr.exceptions import GitCloneError
+from ticket2pr.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
+from ticket2pr.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 

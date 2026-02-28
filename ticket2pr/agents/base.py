@@ -17,7 +17,7 @@ from claude_agent_sdk import (
     query,
 )
 
-from src.exceptions import AgentQueryUnknownError
+from ticket2pr.exceptions import AgentQueryUnknownError
 
 
 def extract_session_id(message: Message) -> str | None:

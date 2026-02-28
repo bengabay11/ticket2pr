@@ -1,8 +1,8 @@
 import shutil
 from pathlib import Path
 
-from src.exceptions import PreCommitNotFoundError
-from src.shell.base import CommandResult, run_command
+from ticket2pr.exceptions import PreCommitNotFoundError
+from ticket2pr.shell.base import CommandResult, run_command
 
 
 def find_pre_commit_executable() -> str | None:

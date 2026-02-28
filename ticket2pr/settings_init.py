@@ -5,7 +5,7 @@ from typing import Any
 
 import tomli_w
 
-from src.console_utils import (
+from ticket2pr.console_utils import (
     format_bold,
     format_cyan,
     format_dim,
@@ -18,7 +18,7 @@ from src.console_utils import (
     print_summary,
     print_warning,
 )
-from src.validators import (
+from ticket2pr.validators import (
     validate_non_empty,
     validate_repo_format,
     validate_url,
@@ -106,7 +106,7 @@ def section_decorator(section_name: str) -> Callable[[Callable[..., Any]], Calla
 
 @section_decorator("Core Settings")
 def _collect_core_settings() -> str:
-    from src.validators import validate_branch_name
+    from ticket2pr.validators import validate_branch_name
 
     base_branch = _prompt_with_validation(
         "Base branch",
