@@ -1,6 +1,8 @@
 import logging
+import time
 from pathlib import Path
 
+import humanize
 from pydantic import BaseModel
 
 from ticket2pr.agents.pr_generator import generate_commit_and_pr_body
@@ -11,6 +13,12 @@ from ticket2pr.branch_creator import create_branch_from_jira_issue
 from ticket2pr.clients.github_client import GitHubClient
 from ticket2pr.clients.jira_client import JiraClient
 from ticket2pr.enhanced_git import EnhancedGit
+from ticket2pr.jira_comment import (
+    build_failure_comment,
+    build_started_comment,
+    build_success_comment,
+    post_jira_comment,
+)
 from ticket2pr.pr_content import generate_pr_title_from_jira_issue
 from ticket2pr.shell.pre_commit_runner import (
     has_pre_commit_config,
@@ -80,6 +88,63 @@ async def workflow(
     commit_no_verify: bool = False,
     fix_tests: bool = False,
 ) -> WorkflowResult:
+    repo_name = github_client.repo.full_name
+    repo_url = github_client.repo.html_url
+    started_comment = build_started_comment(
+        repo_name=repo_name,
+        repo_url=repo_url,
+        base_branch=base_branch,
+    )
+    post_jira_comment(jira_client, jira_issue_key, started_comment)
+    start_time = time.monotonic()
+
+    try:
+        result = await _run_workflow(
+            github_client=github_client,
+            jira_client=jira_client,
+            jira_issue_key=jira_issue_key,
+            git=git,
+            base_branch=base_branch,
+            mcp_config_path=mcp_config_path,
+            commit_no_verify=commit_no_verify,
+            fix_tests=fix_tests,
+        )
+    except Exception as exc:
+        duration = humanize.naturaldelta(time.monotonic() - start_time)
+        logger.exception("Workflow failed for %s", jira_issue_key)
+        comment = build_failure_comment(
+            repo_name=repo_name,
+            repo_url=repo_url,
+            base_branch=base_branch,
+            duration=duration,
+            error=exc,
+        )
+        post_jira_comment(jira_client, jira_issue_key, comment)
+        raise
+
+    duration = humanize.naturaldelta(time.monotonic() - start_time)
+    comment = build_success_comment(
+        repo_name=repo_name,
+        repo_url=repo_url,
+        branch_name=result.branch_name,
+        base_branch=base_branch,
+        pr_url=result.pr_url,
+        duration=duration,
+    )
+    post_jira_comment(jira_client, jira_issue_key, comment)
+    return result
+
+
+async def _run_workflow(
+    github_client: GitHubClient,
+    jira_client: JiraClient,
+    jira_issue_key: str,
+    git: EnhancedGit,
+    base_branch: str,
+    mcp_config_path: Path | None = None,
+    commit_no_verify: bool = False,
+    fix_tests: bool = False,
+) -> WorkflowResult:
     logger.info("Fetching Jira issue: %s", jira_issue_key)
     issue = jira_client.fetch_issue(jira_issue_key)
     logger.info("Creating branch for issue %s from base branch: %s", issue.key, base_branch)
@@ -138,7 +203,3 @@ async def workflow(
         pr_url=pr_url,
         jira_issue_permalink=issue.permalink,
     )
-
-    # Get Pull request details from GitHub
-    # Call to LLM to do local CR with jira ticket and github PR
-    # Call to LLM to run relevant tests in the PR. if some. tests failed, fix them and add changes.
