@@ -101,7 +101,10 @@ Output in the exact format specified in your instructions.
 
 
 async def generate_commit_and_pr_body(
-    session_id: str, workspace_path: Path, mcp_config_path: Path | None = None
+    session_id: str,
+    workspace_path: Path,
+    mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
 ) -> tuple[str, str]:
     """
     Generate commit message and PR body based on session context and staged changes.
@@ -110,6 +113,7 @@ async def generate_commit_and_pr_body(
         session_id: The session ID of the conversation to resume
         workspace_path: Path to the workspace root
         mcp_config_path: Optional path to mcp.json configuration file
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow
 
     Returns:
         A tuple of (commit_message, pr_body)
@@ -121,6 +125,7 @@ async def generate_commit_and_pr_body(
         allowed_tools=["Glob", "Bash", "Read", "Grep"],
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
         session_id=session_id,
     ):
         print_agent_message(message)

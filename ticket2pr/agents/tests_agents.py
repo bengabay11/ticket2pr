@@ -44,6 +44,7 @@ Analyze the staged git changes and produce a test plan in {plan_filename}.
 async def plan_tests(
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     plan_filename: str = TESTS_PLAN_FILENAME,
 ) -> Path | None:
     """
@@ -55,6 +56,7 @@ async def plan_tests(
     Args:
         workspace_path: Path to the workspace root. Defaults to current directory.
         mcp_config_path: Optional path to MCP config file.
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow.
         plan_filename: Name of the plan file to write. Defaults to TESTS_PLAN.md.
 
     Returns:
@@ -73,6 +75,7 @@ async def plan_tests(
         allowed_tools=["Glob", "Bash", "Read", "Grep", "Write"],
         cwd=cwd,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     ):
         print_agent_message(message)
 
@@ -118,6 +121,7 @@ async def fix_tests(
     plan_filename: str = TESTS_PLAN_FILENAME,
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     max_retries: int = 10,
 ) -> None:
     """
@@ -129,6 +133,7 @@ async def fix_tests(
         plan_filename: Name of the plan file (for "do not stage" instruction).
         workspace_path: Path to the workspace root. Defaults to current directory.
         mcp_config_path: Optional path to MCP config file.
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow.
         max_retries: Maximum number of fix-and-rerun cycles. Default 10.
     """
     cwd = Path(workspace_path).expanduser() if workspace_path else Path.cwd()
@@ -149,6 +154,7 @@ async def fix_tests(
         permission_mode="acceptEdits",
         cwd=cwd,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     ):
         print_agent_message(message)
 
@@ -156,6 +162,7 @@ async def fix_tests(
 async def try_fix_tests(
     workspace_path: Path | None = None,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     max_retries: int = 10,
 ) -> None:
     """
@@ -166,11 +173,13 @@ async def try_fix_tests(
     Args:
         workspace_path: Path to the workspace root. Defaults to current directory.
         mcp_config_path: Optional path to MCP config file.
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow.
         max_retries: Maximum number of fix-and-rerun cycles for the fixer.
     """
     plan_path = await plan_tests(
         workspace_path=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     )
     if plan_path is None:
         logger.info("No relevant existing tests found for staged changes. Skipping test run.")
@@ -182,5 +191,6 @@ async def try_fix_tests(
         plan_filename=plan_path.name,
         workspace_path=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
         max_retries=max_retries,
     )

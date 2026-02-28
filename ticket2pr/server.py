@@ -69,6 +69,8 @@ def _run_workflow_in_background(
                 jira_issue_key=issue_key,
                 git=local_git,
                 base_branch=base_branch,
+                mcp_config_path=settings.core.mcp_config_path,
+                allowed_mcp_tools=settings.core.allowed_mcp_tools or None,
             )
         )
         logger.info(

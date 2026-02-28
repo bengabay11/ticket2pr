@@ -1,6 +1,12 @@
 [core]
 workspace_path = "."
 base_branch = "main"
+mcp_config_path = "/path/to/mcp.json"
+allowed_mcp_tools = [
+    "mcp__my-server__*",           # all tools from "my-server"
+    "mcp__db__run_query",          # single tool from "db" server
+    "mcp__github__search_issues",  # single tool from "github" server
+]
 
 [jira]
 base_url = "https://<your_company>.atlassian.net"

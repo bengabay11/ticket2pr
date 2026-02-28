@@ -51,6 +51,7 @@ async def try_fix_pre_commit(
     pre_commit_output: str,
     max_retries: int = 5,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
 ) -> None:
     """
     Attempt to fix pre-commit hook failures using AI.
@@ -63,6 +64,7 @@ async def try_fix_pre_commit(
         pre_commit_output: The output from a failed pre-commit run
         max_retries: Maximum number of retry attempts for the AI (default: 5)
         mcp_config_path: Optional path to MCP config file
+        allowed_mcp_tools: Optional list of MCP tool patterns to allow
     """
     system_prompt = SYSTEM_PROMPT.format(max_retries=max_retries)
     prompt = PROMPT_TEMPLATE.format(
@@ -76,5 +78,6 @@ async def try_fix_pre_commit(
         permission_mode="acceptEdits",
         cwd=workspace_path,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
     ):
         print_agent_message(message)

@@ -53,6 +53,7 @@ async def workflow_with_prints(
     jira_client: JiraClient,
     local_git: EnhancedGit,
     mcp_config_path: Path | None = None,
+    allowed_mcp_tools: list[str] | None = None,
     commit_no_verify: bool = False,
     fix_tests: bool = False,
 ) -> None:
@@ -72,6 +73,7 @@ async def workflow_with_prints(
         git=local_git,
         base_branch=base_branch,
         mcp_config_path=mcp_config_path,
+        allowed_mcp_tools=allowed_mcp_tools,
         commit_no_verify=commit_no_verify,
         fix_tests=fix_tests,
     )
@@ -114,6 +116,8 @@ def run(
     """Execute the workflow for a specific Jira ticket."""
     settings, github_client, jira_client = setup()
     final_base_branch = base_branch or settings.core.base_branch
+    final_mcp_config = mcp_config_path or settings.core.mcp_config_path
+    final_allowed_mcp_tools = settings.core.allowed_mcp_tools or None
 
     with setup_workspace(workspace_path, settings.core.workspace_path, github_client) as (
         local_git,
@@ -128,7 +132,8 @@ def run(
                     github_client,
                     jira_client,
                     local_git,
-                    mcp_config_path,
+                    final_mcp_config,
+                    final_allowed_mcp_tools,
                     commit_no_verify,
                     fix_tests,
                 )
