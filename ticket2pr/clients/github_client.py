@@ -45,11 +45,11 @@ class GitHubClient:
 
     @property
     def clone_url(self) -> str:
-        return self.repo.clone_url  # type: ignore[no-any-return]
+        return self.repo.clone_url
 
     @property
     def ssh_url(self) -> str:
-        return self.repo.ssh_url  # type: ignore[no-any-return]
+        return self.repo.ssh_url
 
     def get_base_branch_ref(self, base_branch: str) -> GitRef:
         try:

@@ -40,7 +40,8 @@ class JiraClient:
                 key=issue_key,
                 summary=issue.fields.summary,
                 url=f"{self._url}/browse/{issue_key}",
-                permalink=issue.permalink(),
+                # jira lib ships py.typed but permalink() lacks annotations
+                permalink=issue.permalink(),  # type: ignore[no-untyped-call]
                 description=issue.fields.description or None,
                 type=issue_type,
                 status=status,

@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import Any
 
 from claude_agent_sdk import (
     AssistantMessage,
@@ -88,7 +89,8 @@ def _format_content_blocks(content: list[ContentBlock]) -> list[str]:
                 output_parts.append("Error calling tool.")
             else:
                 output_parts.append("Tool call succeeded.")
-            output_parts.append(block.content)
+            if isinstance(block.content, str):
+                output_parts.append(block.content)
 
     return output_parts
 
@@ -162,21 +164,20 @@ async def run_agent_query(
         cwd: Optional current working directory for the agent to run from.
         mcp_config_path: Optional path to mcp.json configuration file for MCP servers.
     """
-    options_kwargs = {
-        "allowed_tools": allowed_tools,
-        "system_prompt": system_prompt,
-        "permission_mode": permission_mode,
-    }
-
+    optional_kwargs: dict[str, Any] = {}
     if cwd is not None:
-        options_kwargs["cwd"] = str(cwd)
-
+        optional_kwargs["cwd"] = str(cwd)
     if mcp_config_path is not None:
-        options_kwargs["mcp_servers"] = mcp_config_path
-
+        optional_kwargs["mcp_servers"] = mcp_config_path
     if session_id is not None:
-        options_kwargs["resume"] = session_id
-    options = ClaudeAgentOptions(**options_kwargs)
+        optional_kwargs["resume"] = session_id
+
+    options = ClaudeAgentOptions(
+        allowed_tools=allowed_tools,
+        system_prompt=system_prompt,
+        permission_mode=permission_mode,
+        **optional_kwargs,
+    )
     try:
         async for message in query(prompt=prompt, options=options):
             yield message

@@ -31,7 +31,7 @@ class EnhancedGit:
         if not repo_path.exists():
             raise GitWorkspacePathNotExistsError(repo_path)
         self.repo_path = repo_path.expanduser()
-        self._repo = None
+        self._repo: git.Repo | None = None
 
     @classmethod
     def clone_repo(cls, clone_url: str, target_path: Path) -> Self:
@@ -152,6 +152,8 @@ class EnhancedGit:
         if not staged_diff:
             raise NoStagedChangesError
 
-        changed_file_paths = [item.a_path for item in self.repo.index.diff("HEAD")]
+        changed_file_paths = [
+            item.a_path for item in self.repo.index.diff("HEAD") if item.a_path is not None
+        ]
 
         return staged_diff, changed_file_paths
