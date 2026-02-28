@@ -2,39 +2,31 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import shutil
 import sys
-import tempfile
-from collections.abc import Generator
-from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
 
+from src.bootstrap import setup, setup_workspace
 from src.console_utils import (
     format_dim,
     format_success_with_checkmark,
     format_yellow,
-    get_status,
     print_empty_line,
     print_error,
-    print_error_inline,
     print_info,
     print_label_value,
     print_success,
     print_warning,
 )
-from src.enhanced_git import EnhancedGit
-from src.exceptions import GitCloneError
-from src.logging_setup import LoggerHandlerType, SetupLoggerParams, setup_logger
-from src.settings import AppSettings
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from src.clients.github_client import GitHubClient
     from src.clients.jira_client import JiraClient
+    from src.enhanced_git import EnhancedGit
 
 app = typer.Typer(
     name="ticket2pr",
@@ -45,87 +37,12 @@ app = typer.Typer(
 )
 
 
-def _load_settings() -> AppSettings:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    try:
-        return AppSettings()
-    except Exception as e:
-        print_error_inline(f"loading settings: {e}")
-        sys.exit(1)
-
-
-def _initialize_clients(settings: AppSettings) -> tuple[GitHubClient, JiraClient]:
-    from src.clients.github_client import GitHubClient
-    from src.clients.jira_client import JiraClient
-
-    github_client = GitHubClient(
-        github_token=settings.github.api_token,
-        repo_full_name=settings.github.repo_full_name,
-    )
-    jira_client = JiraClient(
-        url=settings.jira.base_url,
-        username=settings.jira.username,
-        password=settings.jira.api_token,
-    )
-    return github_client, jira_client
-
-
 def _init() -> None:
     from src.settings import DEFAULT_CONFIG_DIR
     from src.settings_init import initialize_settings
 
     config_path = DEFAULT_CONFIG_DIR / "config.toml"
     initialize_settings(config_path)
-
-
-@contextmanager
-def _setup_workspace(
-    workspace_path_arg: Path | None,
-    workspace_path_settings: Path | None,
-    github_client: GitHubClient,
-) -> Generator[tuple[EnhancedGit, Path]]:
-    """
-    Set up the workspace for the workflow.
-
-    If no workspace_path is provided (neither arg nor settings), clones the repository
-    to a temp directory and cleans it up when done.
-
-    Yields:
-        A tuple of (EnhancedGit instance, workspace_path)
-    """
-    workspace_path = workspace_path_arg or workspace_path_settings
-    temp_dir: Path | None = None
-    try:
-        if workspace_path is None:
-            shared_temp_dir = Path(tempfile.gettempdir()) / "ticket2pr"
-            shared_temp_dir.mkdir(exist_ok=True)
-            temp_dir = Path(
-                tempfile.mkdtemp(dir=shared_temp_dir, prefix=f"{github_client.repo.name}_")
-            )
-            logger.info(
-                "No workspace path provided, cloning repository to temp directory: %s", temp_dir
-            )
-            try:
-                logger.info("Attempting to clone via SSH: %s", github_client.ssh_url)
-                local_git = EnhancedGit.clone_repo(github_client.ssh_url, temp_dir)
-            except GitCloneError:
-                logger.warning(
-                    "SSH clone failed, falling back to HTTPS: %s", github_client.clone_url
-                )
-                local_git = EnhancedGit.clone_repo(github_client.clone_url, temp_dir)
-            logger.info("Repository cloned successfully")
-            yield local_git, temp_dir
-        else:
-            yield EnhancedGit(workspace_path), workspace_path
-    finally:
-        if temp_dir and temp_dir.exists():
-            logger.info("Cleaning up temp directory: %s", temp_dir)
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                logger.warning("Failed to clean up temp directory '%s': %s", temp_dir, e)
 
 
 async def workflow_with_prints(
@@ -195,27 +112,10 @@ def run(
     ),
 ) -> None:
     """Execute the workflow for a specific Jira ticket."""
-
-    settings = _load_settings()
-
+    settings, github_client, jira_client = setup()
     final_base_branch = base_branch or settings.core.base_branch
 
-    setup_logger(
-        SetupLoggerParams(
-            level=settings.logging.min_log_level,
-            handler_types={LoggerHandlerType.STREAM, LoggerHandlerType.FILE},
-            file_path=settings.logging.log_file_path,
-        )
-    )
-
-    with get_status("Initializing clients...", spinner="dots"):
-        try:
-            github_client, jira_client = _initialize_clients(settings)
-        except Exception as e:
-            print_error(str(e))
-            sys.exit(1)
-
-    with _setup_workspace(workspace_path, settings.core.workspace_path, github_client) as (
+    with setup_workspace(workspace_path, settings.core.workspace_path, github_client) as (
         local_git,
         final_workspace_path,
     ):
@@ -246,6 +146,19 @@ def run(
 def init() -> None:
     """Initialize settings configuration."""
     _init()
+
+
+@app.command()
+def server(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind host"),
+    port: int = typer.Option(8000, "--port", "-p", help="Bind port"),
+) -> None:
+    """Start the webhook server for Jira Automation."""
+    import uvicorn
+
+    from src.server import create_app
+
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 @app.command(name="help")
