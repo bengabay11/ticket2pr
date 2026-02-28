@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.settings import find_first_toml
+from ticket2pr.settings import find_first_toml
 
 
 def test_find_first_toml_dir_not_exists() -> None:

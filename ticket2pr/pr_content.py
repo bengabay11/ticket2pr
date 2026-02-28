@@ -1,4 +1,4 @@
-from src.clients.jira_client import JiraIssue
+from ticket2pr.clients.jira_client import JiraIssue
 
 
 def generate_pr_title_from_jira_issue(jira_issue: JiraIssue) -> str:

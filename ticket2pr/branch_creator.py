@@ -2,8 +2,8 @@ import logging
 import re
 from datetime import datetime
 
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient, JiraIssue
+from ticket2pr.clients.github_client import GitHubClient
+from ticket2pr.clients.jira_client import JiraClient, JiraIssue
 
 logger = logging.getLogger(__name__)
 

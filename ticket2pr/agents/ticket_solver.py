@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
 
-from src.agents.base import extract_session_id, print_agent_message, run_agent_query
-from src.clients.jira_client import JiraIssue
-from src.exceptions import PlanNotFoundError
+from ticket2pr.agents.base import extract_session_id, print_agent_message, run_agent_query
+from ticket2pr.clients.jira_client import JiraIssue
+from ticket2pr.exceptions import PlanNotFoundError
 
 logger = logging.getLogger(__name__)
 

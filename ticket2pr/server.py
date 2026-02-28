@@ -2,20 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from pathlib import Path
 
-import tomli
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from src.bootstrap import setup, setup_workspace
-from src.clients.github_client import GitHubClient
-from src.clients.jira_client import JiraClient
-from src.settings import AppSettings
+from ticket2pr import __version__
+from ticket2pr.bootstrap import setup, setup_workspace
+from ticket2pr.clients.github_client import GitHubClient
+from ticket2pr.clients.jira_client import JiraClient
+from ticket2pr.settings import AppSettings
 
 logger = logging.getLogger(__name__)
-
-PYPROJECT_PATH = Path(__file__).resolve().parent.parent / "pyproject.toml"
 
 
 class WebhookPayload(BaseModel):
@@ -38,7 +35,7 @@ def _run_workflow_in_background(
 ) -> None:
     """Run the full ticket2pr workflow for a single issue. Intended to be
     called from a background thread so it doesn't block the server."""
-    from src.workflow import workflow
+    from ticket2pr.workflow import workflow
 
     with setup_workspace(None, settings.core.workspace_path, github_client) as (
         local_git,
@@ -87,13 +84,8 @@ def create_app() -> FastAPI:
         )
         return WebhookResponse(status="accepted", issue_key=payload.issue_key)
 
-    with PYPROJECT_PATH.open("rb") as f:
-        pyproject_file_content = tomli.load(f)
-    package_version = pyproject_file_content["project"]["version"]
-    package_name = pyproject_file_content["project"]["name"]
-
     @fastapi_app.get("/health", response_model=HealthResponse)
     async def health() -> HealthResponse:
-        return HealthResponse(status="ok", service=package_name, version=package_version)
+        return HealthResponse(status="ok", service="ticket2pr-server", version=__version__)
 
     return fastapi_app

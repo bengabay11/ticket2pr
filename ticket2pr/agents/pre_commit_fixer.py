@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.agents.base import print_agent_message, run_agent_query
+from ticket2pr.agents.base import print_agent_message, run_agent_query
 
 SYSTEM_PROMPT = """
 You are an expert Software Engineer specializing in fixing pre-commit hook failures.

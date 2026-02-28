@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from src.bootstrap import setup, setup_workspace
-from src.console_utils import (
+from ticket2pr.bootstrap import setup, setup_workspace
+from ticket2pr.console_utils import (
     format_dim,
     format_success_with_checkmark,
     format_yellow,
@@ -24,9 +24,9 @@ from src.console_utils import (
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from src.clients.github_client import GitHubClient
-    from src.clients.jira_client import JiraClient
-    from src.enhanced_git import EnhancedGit
+    from ticket2pr.clients.github_client import GitHubClient
+    from ticket2pr.clients.jira_client import JiraClient
+    from ticket2pr.enhanced_git import EnhancedGit
 
 app = typer.Typer(
     name="ticket2pr",
@@ -38,8 +38,8 @@ app = typer.Typer(
 
 
 def _init() -> None:
-    from src.settings import DEFAULT_CONFIG_DIR
-    from src.settings_init import initialize_settings
+    from ticket2pr.settings import DEFAULT_CONFIG_DIR
+    from ticket2pr.settings_init import initialize_settings
 
     config_path = DEFAULT_CONFIG_DIR / "config.toml"
     initialize_settings(config_path)
@@ -63,7 +63,7 @@ async def workflow_with_prints(
     print_label_value("Github repository", github_client.repo.full_name)
     print_empty_line()
 
-    from src.workflow import workflow
+    from ticket2pr.workflow import workflow
 
     result = await workflow(
         github_client=github_client,
@@ -156,7 +156,7 @@ def server(
     """Start the webhook server for Jira Automation."""
     import uvicorn
 
-    from src.server import create_app
+    from ticket2pr.server import create_app
 
     uvicorn.run(create_app(), host=host, port=port)
 

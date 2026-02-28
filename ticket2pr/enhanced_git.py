@@ -3,7 +3,7 @@ from pathlib import Path
 import git
 from typing_extensions import Self
 
-from src.exceptions import (
+from ticket2pr.exceptions import (
     GitCloneError,
     GitFetchCheckoutUnknownError,
     GitPushError,
