@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "claude-agent-sdk>=0.1.25",
     "colorlog>=6.9.0",
+    "fastapi>=0.134.0",
     "gitpython>=3.1.46",
     "jira>=3.10.5",
     "pydantic>=2.11.5",
@@ -17,6 +18,7 @@ dependencies = [
     "tomli-w>=1.2.0",
     "typer>=0.21.1",
     "typing_extensions>=4.0.0",
+    "uvicorn>=0.40.0",
 ]
 
 [project.scripts]

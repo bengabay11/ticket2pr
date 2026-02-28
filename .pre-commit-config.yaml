@@ -56,7 +56,17 @@ repos:
         # mypy causing problems in the pre-commit without specifying the dependencies.
         # need to think about a better way to handle this.
         additional_dependencies:
-          [tokenize-rt==3.2.0, colorlog, pydantic, pydantic-settings, pytest, pytest-cases, typer]
+          [
+            tokenize-rt==3.2.0,
+            colorlog,
+            pydantic,
+            pydantic-settings,
+            pytest,
+            pytest-cases,
+            typer,
+            fastapi,
+            uvicorn,
+          ]
 
   # Although Ruff detects relative imports via TID252, it does not auto-fix them yet.
   # We use absolufy-imports, until Ruff supports this feature.
