@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class WebhookPayload(BaseModel):
     issue_key: str
+    repo_full_name: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -31,20 +32,31 @@ class WebhookResponse(BaseModel):
 
 
 def _run_workflow_in_background(
-    issue_key: str, settings: AppSettings, github_client: GitHubClient, jira_client: JiraClient
+    issue_key: str,
+    settings: AppSettings,
+    github_client: GitHubClient,
+    jira_client: JiraClient,
+    repo_full_name_override: str | None = None,
 ) -> None:
     """Run the full ticket2pr workflow for a single issue. Intended to be
     called from a background thread so it doesn't block the server."""
     from ticket2pr.workflow import workflow
 
+    if repo_full_name_override:
+        github_client = GitHubClient(
+            github_token=settings.github.api_token,
+            repo_full_name=repo_full_name_override,
+        )
+
     with setup_workspace(None, settings.core.workspace_path, github_client) as (
         local_git,
         workspace_path,
     ):
+        repo_name = repo_full_name_override or settings.github.repo_full_name
         logger.info(
             "Starting workflow for %s (repo: %s, base branch: %s, local workspace: %s)",
             issue_key,
-            settings.github.repo_full_name,
+            repo_name,
             settings.core.base_branch,
             workspace_path,
         )
@@ -72,7 +84,11 @@ def create_app() -> FastAPI:
 
     @fastapi_app.post("/webhook", status_code=202, response_model=WebhookResponse)
     async def webhook(payload: WebhookPayload) -> WebhookResponse:
-        logger.info("Received webhook for issue: %s", payload.issue_key)
+        logger.info(
+            "Received webhook for issue: %s (repo: %s)",
+            payload.issue_key,
+            payload.repo_full_name,
+        )
         loop = asyncio.get_running_loop()
         loop.run_in_executor(
             None,
@@ -81,6 +97,7 @@ def create_app() -> FastAPI:
             settings,
             github_client,
             jira_client,
+            payload.repo_full_name,
         )
         return WebhookResponse(status="accepted", issue_key=payload.issue_key)
 

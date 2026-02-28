@@ -12,6 +12,9 @@ from ticket2pr.exceptions import (
     NoStagedChangesError,
 )
 
+DEFAULT_COMMIT_AUTHOR_NAME = "ticket2pr[bot]"
+DEFAULT_COMMIT_AUTHOR_EMAIL = "ticket2pr[bot]@users.noreply.github.com"
+
 
 class EnhancedGit:
     """
@@ -21,26 +24,42 @@ class EnhancedGit:
     multiple underlying git commands in sequence.
     """
 
-    def __init__(self, repo_path: Path = Path(".")) -> None:
+    def __init__(
+        self,
+        repo_path: Path = Path("."),
+        commit_author_name: str = DEFAULT_COMMIT_AUTHOR_NAME,
+        commit_author_email: str = DEFAULT_COMMIT_AUTHOR_EMAIL,
+    ) -> None:
         """
         Initialize an EnhancedGit instance for a given repository path.
 
         Args:
             repo_path: Path to the git repository (default: current directory)
+            commit_author_name: Name to use for commit author/committer
+            commit_author_email: Email to use for commit author/committer
         """
         if not repo_path.exists():
             raise GitWorkspacePathNotExistsError(repo_path)
         self.repo_path = repo_path.expanduser()
         self._repo: git.Repo | None = None
+        self._author = git.Actor(commit_author_name, commit_author_email)
 
     @classmethod
-    def clone_repo(cls, clone_url: str, target_path: Path) -> Self:
+    def clone_repo(
+        cls,
+        clone_url: str,
+        target_path: Path,
+        commit_author_name: str = DEFAULT_COMMIT_AUTHOR_NAME,
+        commit_author_email: str = DEFAULT_COMMIT_AUTHOR_EMAIL,
+    ) -> Self:
         """
         Clone a repository to the specified path and return an EnhancedGit instance.
 
         Args:
             clone_url: The URL of the repository to clone
             target_path: The path where the repository will be cloned
+            commit_author_name: Name to use for commit author/committer
+            commit_author_email: Email to use for commit author/committer
 
         Returns:
             An EnhancedGit instance for the cloned repository
@@ -52,7 +71,7 @@ class EnhancedGit:
             git.Repo.clone_from(clone_url, target_path)
         except Exception as e:
             raise GitCloneError(clone_url, str(e)) from e
-        return cls(target_path)
+        return cls(target_path, commit_author_name, commit_author_email)
 
     @property
     def repo(self) -> git.Repo:
@@ -122,10 +141,17 @@ class EnhancedGit:
                 return None
 
             if no_verify:
-                commit = self.repo.git.commit("-m", message, "--no-verify")
+                self.repo.git.commit(
+                    "-m",
+                    message,
+                    "--no-verify",
+                    author=f"{self._author.name} <{self._author.email}>",
+                )
                 commit = self.repo.head.commit
             else:
-                commit = self.repo.index.commit(message)
+                commit = self.repo.index.commit(
+                    message, author=self._author, committer=self._author
+                )
 
             # Push to remote
             remote_obj = self.repo.remote(name=remote)
