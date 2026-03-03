@@ -39,6 +39,8 @@ def _run_workflow_in_background(
     jira_client: JiraClient,
     repo_full_name_override: str | None = None,
     base_branch_override: str | None = None,
+    commit_no_verify: bool = False,
+    fix_tests: bool = True,
 ) -> None:
     from ticket2pr.workflow import workflow
 
@@ -71,6 +73,8 @@ def _run_workflow_in_background(
                 base_branch=base_branch,
                 mcp_config_path=settings.core.mcp_config_path,
                 allowed_mcp_tools=settings.core.allowed_mcp_tools or None,
+                commit_no_verify=commit_no_verify,
+                fix_tests=fix_tests,
             )
         )
         logger.info(

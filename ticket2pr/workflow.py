@@ -91,7 +91,7 @@ async def workflow(
     mcp_config_path: Path | None = None,
     allowed_mcp_tools: list[str] | None = None,
     commit_no_verify: bool = False,
-    fix_tests: bool = False,
+    fix_tests: bool = True,
 ) -> WorkflowResult:
     repo_name = github_client.repo.full_name
     repo_url = github_client.repo.html_url
@@ -150,7 +150,7 @@ async def _run_workflow(
     mcp_config_path: Path | None = None,
     allowed_mcp_tools: list[str] | None = None,
     commit_no_verify: bool = False,
-    fix_tests: bool = False,
+    fix_tests: bool = True,
 ) -> WorkflowResult:
     logger.info("Fetching Jira issue: %s", jira_issue_key)
     issue = jira_client.fetch_issue(jira_issue_key)
