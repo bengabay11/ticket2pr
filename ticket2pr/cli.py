@@ -107,7 +107,7 @@ def run(
         help="bypass pre-commit and commit-msg hooks when committing (git commit --no-verify)",
     ),
     fix_tests: bool = typer.Option(
-        False,
+        True,
         "--fix-tests",
         "-t",
         help="plan and run tests from staged changes, fix failures, then stage only fix changes",
